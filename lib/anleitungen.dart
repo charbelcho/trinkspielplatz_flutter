@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AnleitungenButton extends StatelessWidget {
-  Map<String, String> spieleAnleitungen = {
+  final Map<String, String> spieleAnleitungen = {
     'Ich hab noch nie':
         """Ein Spieler liest die angezeigte Frage vor. Alle Spieler, die die Frage mit "ja, habe ich schon mal" beantworten können, trinken einen Schluck.""",
     'Wer würde eher?':
@@ -27,6 +27,8 @@ class AnleitungenButton extends StatelessWidget {
     '100':
         """Füge die Spieler hinzu. Der erste Spieler fängt an zu würfeln. Er kann so lange Würfeln wie er möchte, die Punkte werden zusammen gezählt. Er kann jederzeit seinen Punktestand speichern. Dann ist der nächste Spieler dran. Würfelt der Spieler eine 6 fällt er auf seinen zuletzt gespeicherten Punkestand zurück. Ein Spieler hat gewonnen sobald er 100 oder mehr Punkte gesammelt hat. Bei einer 6 muss der Spieler die angezeigte Anzahl an Schlucken trinken. Bei einer 1 trinken die anderen Spieler die angezeigte Anzahl an Schlucken."""
   };
+
+  AnleitungenButton({super.key});
 
   void _showBottomSheet(BuildContext context) {
     showModalBottomSheet(
