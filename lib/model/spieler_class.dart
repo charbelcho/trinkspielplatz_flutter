@@ -1,4 +1,4 @@
-import 'package:my_flutter_project/model/data_class.dart';
+import 'package:trinkspielplatz/model/data_class.dart';
 
 class Spieler {
   String id;

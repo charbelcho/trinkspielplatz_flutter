@@ -1,24 +1,31 @@
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
-import 'package:my_flutter_project/anleitungen.dart';
-import 'package:my_flutter_project/deck_utils.dart';
-import 'package:my_flutter_project/model/cards_class.dart';
-import 'package:my_flutter_project/flip_card.dart';
-import 'package:my_flutter_project/model/spieler_class.dart';
-import 'package:my_flutter_project/spieler_pferderennen_modal.dart';
-import 'package:my_flutter_project/three_d_button.dart';
+import 'package:trinkspielplatz/ad_screen.dart';
+import 'package:trinkspielplatz/anleitungen.dart';
+import 'package:trinkspielplatz/deck_utils.dart';
+import 'package:trinkspielplatz/model/cards_class.dart';
+import 'package:trinkspielplatz/flip_card.dart';
+import 'package:trinkspielplatz/model/spieler_class.dart';
+import 'package:trinkspielplatz/notify.dart';
+import 'package:trinkspielplatz/pferderennen_card.dart';
+import 'package:trinkspielplatz/spieler_pferderennen_modal.dart';
+import 'package:trinkspielplatz/three_d_button.dart';
 import 'dart:math';
 import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Pferderennen extends StatefulWidget {
-  const Pferderennen({super.key});
+  final FirebaseAnalyticsObserver observer;
+  const Pferderennen({Key?key, required this.observer}) : super(key: key);
 
   @override
   State<Pferderennen> createState() => _PferderennenState();
 }
 
 class _PferderennenState extends State<Pferderennen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, RouteAware {
+  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+  
   late List<AnimationController> animationControllers;
 
   final random = Random();
@@ -33,6 +40,18 @@ class _PferderennenState extends State<Pferderennen>
   int position2 = 0;
   int position3 = 0;
   int position4 = 0;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
+  }
+
+  @override
+  void dispose() {
+    widget.observer.unsubscribe(this);
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -56,13 +75,98 @@ class _PferderennenState extends State<Pferderennen>
     }
 
     Future.delayed(const Duration(seconds: 1), () {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (BuildContext context) =>
-              SpielerPferderennenModal(spieler: spielerPferderennen),
-        ),
-      );
+      _openSpielerDialog();
     });
+  }
+
+  @override
+  void didPush() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  @override
+  void didPopNext() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  void _sendCurrentTabToAnalytics() {
+    analytics.setCurrentScreen(
+      screenName: '/pferderennen',
+    );
+  }
+
+  List<Widget> generateVerdeckt() {
+    List<Widget> verdecktPferderennenCards = [];
+
+    for (int i = 6; i >= 0; i--) {
+      verdecktPferderennenCards.add(
+        PferderennenCardVerdeckt(
+            width: 40,
+            childWidget: FlipCardReverse(
+                animationReverseController: animationControllers[i],
+                frontChild: Image.asset(
+                    'images/cards/${deck.isNotEmpty ? deckVerdeckt[i].card : 'herz2'}.png'))),
+      );
+    }
+    verdecktPferderennenCards.add(const SizedBox(height: 60, width: 40));
+    return verdecktPferderennenCards;
+  }
+
+  List<Widget> generateHerzA() {
+    List<Widget> herzPferderennenCards = [];
+
+    for (int i = 7; i >= 0; i--) {
+      herzPferderennenCards.add(PferderennenCard(
+          width: 40,
+          visible: position1 == i,
+          childWidget: Image.asset('images/cards/herza.png')));
+    }
+    return herzPferderennenCards;
+  }
+
+  List<Widget> generateKreuzA() {
+    List<Widget> kreuzPferderennenCards = [];
+
+    for (int i = 7; i >= 0; i--) {
+      kreuzPferderennenCards.add(PferderennenCard(
+          width: 40,
+          visible: position2 == i,
+          childWidget: Image.asset('images/cards/kreuza.png')));
+    }
+    return kreuzPferderennenCards;
+  }
+
+  List<Widget> generateKaroA() {
+    List<Widget> karoPferderennenCards = [];
+
+    for (int i = 7; i >= 0; i--) {
+      karoPferderennenCards.add(PferderennenCard(
+          width: 40,
+          visible: position3 == i,
+          childWidget: Image.asset('images/cards/karoa.png')));
+    }
+    return karoPferderennenCards;
+  }
+
+  List<Widget> generatePikA() {
+    List<Widget> pikPferderennenCards = [];
+
+    for (int i = 7; i >= 0; i--) {
+      pikPferderennenCards.add(PferderennenCard(
+          width: 40,
+          visible: position4 == i,
+          childWidget: Image.asset('images/cards/pika.png')));
+    }
+    return pikPferderennenCards;
+  }
+
+  void _openSpielerDialog() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (BuildContext context) =>
+            SpielerPferderennenModal(spieler: spielerPferderennen),
+      ),
+    );
   }
 
   void _naechsteKarte() {
@@ -80,6 +184,8 @@ class _PferderennenState extends State<Pferderennen>
           _checkPosition();
         }
       });
+    } else {
+      notify.notifyError(context, 'Füge mind. 2 Spieler hinzu');
     }
   }
 
@@ -203,7 +309,7 @@ class _PferderennenState extends State<Pferderennen>
   void _goBack(int x) {
     String zeichen = '';
     setState(() {
-      switch (deck[x].zeichen) {
+      switch (deckVerdeckt[x].zeichen) {
         case "herz":
           position1 -= 1;
           zeichen = 'Herz';
@@ -261,12 +367,7 @@ class _PferderennenState extends State<Pferderennen>
       started = false;
 
       Future.delayed(const Duration(seconds: 1), () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (BuildContext context) =>
-                SpielerPferderennenModal(spieler: spielerPferderennen),
-          ),
-        );
+        _openSpielerDialog();
       });
     });
   }
@@ -317,7 +418,7 @@ class _PferderennenState extends State<Pferderennen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
+                Container(
                   height: 100,
                   child: ListView.builder(
                     itemCount: winner.length,
@@ -329,7 +430,7 @@ class _PferderennenState extends State<Pferderennen>
                     },
                   ),
                 ),
-                SizedBox(
+                Container(
                   height: 100,
                   child: ListView.builder(
                     itemCount: loser.length,
@@ -368,435 +469,65 @@ class _PferderennenState extends State<Pferderennen>
             backgroundColor: colors.teal,
             foregroundColor: Colors.black,
             actions: [
+              IconButton(
+                  onPressed: _openSpielerDialog,
+                  icon: const Icon(Icons.settings)),
               AnleitungenButton()
               // You can add more icons here if needed
             ]),
+        resizeToAvoidBottomInset: false,
         body: Center(
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.95,
             padding: const EdgeInsets.only(top: 10.0),
             child: Column(
               children: [
-                Container(
-                  height: MediaQuery.of(context).size.height - 350.0,
-                  padding: const EdgeInsets.all(10.0),
-                  decoration: ShapeDecoration(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25.0),
-                          side:
-                              const BorderSide(width: 10, color: colors.teal))),
-                  child: Center(
-                      child: Stack(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          IconButton(
-                            icon: const Icon(
-                                Icons.settings, color: Colors.grey,), // Icon to be displayed
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (BuildContext context) =>
-                                      SpielerPferderennenModal(
-                                          spieler: spielerPferderennen),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      Row(
+                Expanded(
+                  child: Container(
+                    //height: MediaQuery.of(context).size.height,
+                    width: MediaQuery.of(context).size.width * 0.95,
+                    padding: const EdgeInsets.all(10.0),
+                    decoration: ShapeDecoration(
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25.0),
+                            side: const BorderSide(
+                                width: 10, color: colors.teal))),
+                    child: Center(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Column(
                             mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: FlipCardReverse(
-                                      animationReverseController:
-                                          animationControllers[6],
-                                      frontChild: Image.asset(
-                                          'images/cards/${deck.isNotEmpty ? deckVerdeckt[6].card : 'herz2'}.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: FlipCardReverse(
-                                      animationReverseController:
-                                          animationControllers[5],
-                                      frontChild: Image.asset(
-                                          'images/cards/${deck.isNotEmpty ? deckVerdeckt[5].card : 'herz2'}.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: FlipCardReverse(
-                                      animationReverseController:
-                                          animationControllers[4],
-                                      frontChild: Image.asset(
-                                          'images/cards/${deck.isNotEmpty ? deckVerdeckt[4].card : 'herz2'}.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: FlipCardReverse(
-                                      animationReverseController:
-                                          animationControllers[3],
-                                      frontChild: Image.asset(
-                                          'images/cards/${deck.isNotEmpty ? deckVerdeckt[3].card : 'herz2'}.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: FlipCardReverse(
-                                      animationReverseController:
-                                          animationControllers[2],
-                                      frontChild: Image.asset(
-                                          'images/cards/${deck.isNotEmpty ? deckVerdeckt[2].card : 'herz2'}.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: FlipCardReverse(
-                                      animationReverseController:
-                                          animationControllers[1],
-                                      frontChild: Image.asset(
-                                          'images/cards/${deck.isNotEmpty ? deckVerdeckt[1].card : 'herz2'}.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: FlipCardReverse(
-                                      animationReverseController:
-                                          animationControllers[0],
-                                      frontChild: Image.asset(
-                                          'images/cards/${deck.isNotEmpty ? deckVerdeckt[0].card : 'herz2'}.png'))),
-                              const SizedBox(height: 60, width: 40)
-                            ],
+                            children: generateVerdeckt()
                           ),
+                          Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: generateHerzA()),
+                          Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: generateKreuzA()),
+                          Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: generateKaroA()),
+                          Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: generatePikA()),
                           Column(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position1 == 7 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/herza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position1 == 6 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/herza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position1 == 5 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/herza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position1 == 4 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/herza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position1 == 3 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/herza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position1 == 2 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/herza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position1 == 1 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/herza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position1 == 0 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/herza.png')))
-                            ],
-                          ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position2 == 7 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/kreuza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position2 == 6 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/kreuza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position2 == 5 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/kreuza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position2 == 4 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/kreuza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position2 == 3 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/kreuza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position2 == 2 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/kreuza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position2 == 1 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/kreuza.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position2 == 0 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/kreuza.png')))
-                            ],
-                          ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position3 == 7 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/karoa.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position3 == 6 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/karoa.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position3 == 5 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/karoa.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position3 == 4 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/karoa.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position3 == 3 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/karoa.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position3 == 2 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/karoa.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position3 == 1 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/karoa.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position3 == 0 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/karoa.png')))
-                            ],
-                          ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position4 == 7 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/pika.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position4 == 6 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/pika.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position4 == 5 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/pika.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position4 == 4 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/pika.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position4 == 3 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/pika.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position4 == 2 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/pika.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position4 == 1 ? 1.0 : 0.0,
-                                      child: Image.asset(
-                                          'images/cards/pika.png'))),
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 400),
-                                      opacity: position4 == 0 ? 1.0 : 0.0,
-                                      child:
-                                          Image.asset('images/cards/pika.png')))
-                            ],
-                          ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              SizedBox(
-                                  height: 60,
-                                  width: 40,
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 400),
-                                    transitionBuilder: (child, animation) {
-                                      return FadeTransition(
-                                          opacity: animation, child: child);
-                                    },
-                                    child: Image.asset(
+                              AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 400),
+                                  transitionBuilder: (child, animation) {
+                                    return FadeTransition(
+                                        opacity: animation, child: child);
+                                  },
+                                  child: PferderennenCardVerdeckt(
+                                      width: 40,
+                                      childWidget: Image.asset(
                                         'images/cards/${started ? deck[n].card : 'back2'}.png',
-                                        key: ValueKey<int>(deck[n].id)),
-                                  )),
+                                      ),
+                                      key: ValueKey<int>(deck[n].id))),
                               const SizedBox(
                                 height: 60,
                                 width: 40,
@@ -805,26 +536,19 @@ class _PferderennenState extends State<Pferderennen>
                           ),
                         ],
                       ),
-                    ],
-                  )),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 8.0),
                 AnimatedButton(
                   width: (MediaQuery.of(context).size.width * 0.95),
                   color: colors.teal,
                   onPressed: () {
-                    //_showOverlay(context);
                     _naechsteKarte();
                   },
-                  child: const Text(
-                    strings.naechsteKarte,
-                    style: TextStyle(
-                      fontSize: 22,
-                      color: Colors.black,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  child: const Text(strings.naechsteKarte),
                 ),
+                const AdScreen()
               ],
             ),
           ),

@@ -1,21 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:my_flutter_project/bier_button.dart';
-import 'package:my_flutter_project/custom_widget.dart';
+import 'package:trinkspielplatz/ad_screen.dart';
+import 'package:trinkspielplatz/anleitungen.dart';
+import 'package:trinkspielplatz/bier_button.dart';
+import 'package:trinkspielplatz/custom_widget.dart';
 import 'dart:math';
-import 'package:my_flutter_project/deck_utils.dart';
-import 'package:my_flutter_project/model/cards_class.dart';
-import 'package:my_flutter_project/three_d_button.dart';
+import 'package:trinkspielplatz/deck_utils.dart';
+import 'package:trinkspielplatz/model/cards_class.dart';
+import 'package:trinkspielplatz/notify.dart';
+import 'package:trinkspielplatz/three_d_button.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Karten extends StatefulWidget {
-  const Karten({Key? key}) : super(key: key);
+  final FirebaseAnalyticsObserver observer;
+
+  const Karten({
+    Key? key,
+    required this.observer,
+  }) : super(key: key);
 
   @override
-  _KartenState createState() => _KartenState();
+  State<Karten> createState() => _KartenState();
 }
 
-class _KartenState extends State<Karten> {
+class _KartenState extends State<Karten> with RouteAware {
+  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+
+  var notification = Notify();
   int n = 0;
   List<Cards> deck = [];
 
@@ -32,6 +44,18 @@ class _KartenState extends State<Karten> {
   ]; // Initialize with options selected
   List<String> pendingOptionsZeichen = ['Herz', 'Kreuz', 'Karo', 'Pik'];
   List<String> pendingOptionsZahl = ['2-6', '7-10', 'Bube-Ass'];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
+  }
+
+  @override
+  void dispose() {
+    widget.observer.unsubscribe(this);
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -165,86 +189,126 @@ class _KartenState extends State<Karten> {
             title: const Text("Karten"),
             centerTitle: true,
             backgroundColor: colors.teal,
-            foregroundColor: Colors.black),
+            foregroundColor: Colors.black,
+            actions: [
+              AnleitungenButton()
+              // You can add more icons here if needed
+            ]),
         body: Center(
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.95,
             padding: const EdgeInsets.only(top: 10.0),
             child: Column(
               children: [
-                Container(
-                  height: 500,
-                  decoration: ShapeDecoration(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25.0),
-                          side:
-                              const BorderSide(width: 10, color: colors.teal))),
-                  child: Center(
-                      child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const BierButton(),
-                                FloatingActionButton(
-                                  heroTag: 'settings_wuerfel_tag',
-                                  foregroundColor: Colors.black,
-                                  backgroundColor: colors.teal,
-                                  onPressed: () {
-                                    _showSettingsDialog(context);
-                                  },
-                                  child: const Icon(Icons.settings),
-                                )
-                              ],
-                            ),
-                          ],
-                        ),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                Expanded(
+                  child: Container(
+                    //height: 500,
+                    width: MediaQuery.of(context).size.width * 0.95,
+                    decoration: ShapeDecoration(
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25.0),
+                            side: const BorderSide(
+                                width: 10, color: colors.teal))),
+                    child: Center(
+                        child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Column(
                             children: [
-                              AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 400),
-                                  transitionBuilder: (child, animation) {
-                                    return FadeTransition(
-                                      opacity: animation,
-                                      child: child,
-                                    );
-                                  },
-                                  child: Image.asset(
-                                    started
-                                        ? 'images/cards/${deck[n].card}.png'
-                                        : 'images/cards/back2.png',
-                                    key: ValueKey<int>(deck[n].id),
-                                  )),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const BierButton(),
+                                  FloatingActionButton(
+                                    heroTag: 'settings_wuerfel_tag',
+                                    foregroundColor: Colors.black,
+                                    backgroundColor: colors.teal,
+                                    onPressed: () {
+                                      _showSettingsDialog(context);
+                                    },
+                                    child: const Icon(Icons.settings),
+                                  )
+                                ],
+                              ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                  )),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 400),
+                                    transitionBuilder: (child, animation) {
+                                      return FadeTransition(
+                                        opacity: animation,
+                                        child: child,
+                                      );
+                                    },
+                                    child: Container(
+                                      key: ValueKey<int>(deck[n].id),
+                                      height:
+                                          MediaQuery.of(context).size.height *
+                                              0.33,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(10),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(
+                                                0.4), // Shadow color and opacity
+                                            spreadRadius:
+                                                2, // How far the shadow spreads
+                                            blurRadius:
+                                                5, // The blur radius of the shadow
+                                            offset: const Offset(0,
+                                                3), // Offset of the shadow (x, y)
+                                          ),
+                                        ],
+                                      ),
+                                      child: Image.asset(
+                                        started
+                                            ? 'images/cards/${deck[n].card}.png'
+                                            : 'images/cards/back2.png',
+                                      ),
+                                    )),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                  ),
                 ),
                 const SizedBox(height: 8.0),
-                Row(
-                  children: [
-                    AnimatedButton(
-                        width: (MediaQuery.of(context).size.width * 0.95),
-                        color: colors.teal,
-                        onPressed: () {
-                          _naechsteKarte();
-                        },
-                        child: const Text(strings.naechsteKarte))
-                  ],
-                ),
+                AnimatedButton(
+                    width: (MediaQuery.of(context).size.width * 0.95),
+                    color: colors.teal,
+                    onPressed: () {
+                      _naechsteKarte();
+                    },
+                    child: const Text(strings.naechsteKarte)),
+                const AdScreen()
               ],
             ),
           ),
         ));
+  }
+
+  @override
+  void didPush() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  @override
+  void didPopNext() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  void _sendCurrentTabToAnalytics() {
+    analytics.setCurrentScreen(
+      screenName: '/karten',
+    );
   }
 }

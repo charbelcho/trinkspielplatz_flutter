@@ -1,22 +1,28 @@
 import 'dart:math';
-
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:my_flutter_project/bier_button.dart';
-import 'package:my_flutter_project/three_d_button.dart';
+import 'package:trinkspielplatz/ad_screen.dart';
+import 'package:trinkspielplatz/anleitungen.dart';
+import 'package:trinkspielplatz/bier_button.dart';
+import 'package:trinkspielplatz/logger.dart';
+import 'package:trinkspielplatz/notify.dart';
+import 'package:trinkspielplatz/three_d_button.dart';
 import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 import 'model/data_class.dart';
 
 class WahrheitPflicht extends StatefulWidget {
-  const WahrheitPflicht({super.key});
+  final FirebaseAnalyticsObserver observer;
+  const WahrheitPflicht({Key? key, required this.observer}) : super(key: key);
 
   @override
   State<WahrheitPflicht> createState() => _WahrheitPflichtState();
 }
 
-class _WahrheitPflichtState extends State<WahrheitPflicht> {
+class _WahrheitPflichtState extends State<WahrheitPflicht> with RouteAware {
+  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   int n = 0;
   int m = 0;
   final random = Random();
@@ -28,11 +34,39 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> {
   bool loadingPflicht = true;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
+  }
+
+  @override
+  void dispose() {
+    widget.observer.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
   void initState() {
     super.initState();
 
     fetchDataWahrheit();
     fetchDataPflicht();
+  }
+
+  @override
+  void didPush() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  @override
+  void didPopNext() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  void _sendCurrentTabToAnalytics() {
+    analytics.setCurrentScreen(
+      screenName: '/wahrheit_pflicht',
+    );
   }
 
   Future<void> fetchDataWahrheit() async {
@@ -46,24 +80,36 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> {
         // Convert the JSON response into a list of Car objects
         final List<dynamic> responseData = /*json.decode(response.body);*/
             json.decode(utf8.decode(response.bodyBytes));
-        setState(() {
-          wahrheitList = responseData
-              .map((wahrheitData) => WahrheitData.fromJson(wahrheitData))
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            wahrheitList = responseData
+                .map((wahrheitData) => WahrheitData.fromJson(wahrheitData))
+                .toList();
+          });
+        }
       } else {
         // Request failed with an error status code
-        print('Request failed with status: ${response.statusCode}');
-        // Or return null, an empty list, or handle the error case accordingly
+        logger.e(
+            'Requesting Wahrheit-Data failed with status: ${response.statusCode}');
+
+        if (mounted) {
+          // Or return null, an empty list, or handle the error case accordingly
+          notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+        }
       }
     } catch (e) {
       // An error occurred while fetching the data
-      print('Error: $e');
+      logger.e('Error during request from $url:  $e');
       // Or return null, an empty list, or handle the error case accordingly
+      if (mounted) {
+        notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+      }
     }
-    setState(() {
-      loadingWahrheit = false;
-    });
+    if (mounted) {
+      setState(() {
+        loadingWahrheit = false;
+      });
+    }
   }
 
   Future<void> fetchDataPflicht() async {
@@ -77,24 +123,37 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> {
         // Convert the JSON response into a list of Car objects
         final List<dynamic> responseData = /*json.decode(response.body);*/
             json.decode(utf8.decode(response.bodyBytes));
-        setState(() {
-          pflichtList = responseData
-              .map((pflichtData) => PflichtData.fromJson(pflichtData))
-              .toList();
-        });
+        if (mounted) {
+          setState(() {
+            pflichtList = responseData
+                .map((pflichtData) => PflichtData.fromJson(pflichtData))
+                .toList();
+          });
+        }
       } else {
         // Request failed with an error status code
-        print('Request failed with status: ${response.statusCode}');
-        // Or return null, an empty list, or handle the error case accordingly
+        logger.e(
+            'Requesting Pflicht-Data failed with status: ${response.statusCode}');
+
+        if (mounted) {
+          // Or return null, an empty list, or handle the error case accordingly
+          notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+        }
       }
     } catch (e) {
       // An error occurred while fetching the data
-      print('Error: $e');
+      logger.e('Error during request from $url:  $e');
+
       // Or return null, an empty list, or handle the error case accordingly
+      if (mounted) {
+        notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+      }
     }
-    setState(() {
-      loadingPflicht = false;
-    });
+    if (mounted) {
+      setState(() {
+        loadingPflicht = false;
+      });
+    }
   }
 
   @override
@@ -105,7 +164,11 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> {
             title: const Text("Wahrheit oder Pflicht?"),
             centerTitle: true,
             backgroundColor: colors.teal,
-            foregroundColor: Colors.black),
+            foregroundColor: Colors.black,
+            actions: [
+              AnleitungenButton()
+              // You can add more icons here if needed
+            ]),
         body: Stack(
           children: [
             Center(
@@ -137,8 +200,7 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> {
                                   }
                                 });
                               },
-                              child: //Stack(children: [
-                                  AnimatedCrossFade(
+                              child: AnimatedCrossFade(
                                 firstChild: Container(
                                     height: 175,
                                     padding: const EdgeInsets.all(20.0),
@@ -172,7 +234,6 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> {
                                     : CrossFadeState.showSecond,
                                 duration: const Duration(seconds: 1),
                               ),
-                              //]),
                             ),
                             GestureDetector(
                               onTap: () => {
@@ -237,14 +298,7 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> {
                               }
                             });
                           },
-                          child: const Text(
-                            strings.weiter,
-                            style: TextStyle(
-                              fontSize: 22,
-                              color: Colors.black,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                          child: const Text(strings.weiter),
                         ),
                         const BierButton()
                       ],
@@ -252,6 +306,12 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> {
                   ],
                 ),
               ),
+            ),
+            const Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                AdScreen(),
+              ],
             ),
             if (loadingPflicht || loadingWahrheit)
               Container(

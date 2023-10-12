@@ -1,31 +1,38 @@
 import 'dart:convert';
-
+import 'dart:io';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
-import 'package:my_flutter_project/deck_utils.dart';
-import 'package:my_flutter_project/flip_card.dart';
-import 'package:my_flutter_project/model/cards_class.dart';
-import 'package:my_flutter_project/model/room_class.dart';
-import 'package:my_flutter_project/model/spieler_class.dart';
-import 'package:another_flushbar/flushbar.dart';
+import 'package:trinkspielplatz/anleitungen.dart';
+import 'package:trinkspielplatz/deck_utils.dart';
+import 'package:trinkspielplatz/flip_card.dart';
+import 'package:trinkspielplatz/logger.dart';
+import 'package:trinkspielplatz/model/cards_class.dart';
+import 'package:trinkspielplatz/model/room_class.dart';
+import 'package:trinkspielplatz/model/spieler_class.dart';
+import 'package:trinkspielplatz/notify.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
-import 'package:my_flutter_project/three_d_button.dart';
+import 'package:trinkspielplatz/three_d_button.dart';
 import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Busfahrer extends StatefulWidget {
-  const Busfahrer({Key? key}) : super(key: key);
+  final FirebaseAnalyticsObserver observer;
+  final FirebaseAnalytics analytics;
+  const Busfahrer({Key? key, required this.observer, required this.analytics})
+      : super(key: key);
 
   @override
-  _BusfahrerState createState() => _BusfahrerState();
+  State<Busfahrer> createState() => _BusfahrerState();
 }
 
-class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
+class _BusfahrerState extends State<Busfahrer>
+    with TickerProviderStateMixin, RouteAware {
   late List<AnimationController> animationControllers;
   late List<AnimationController> animationReverseControllers;
 
+  bool loading = true;
   int n = 0;
   List<Cards> deck = [];
-  bool loading = false;
 
   String name = '';
   String nameEingabe = '';
@@ -65,26 +72,36 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
   late io.Socket socket;
 
   void connectToServer() {
-    // iOS-Verbindung zu Socket-Server.
-    socket = io.io("ws://localhost:8001", <String, dynamic>{
-      "transports": ["websocket"],
-    });
-
-    // Android-Verbindung zu Socket-Servers.
-    /*socket = io.io("ws://10.0.2.2:8000", <String, dynamic>{
-      "transports": ["websocket"],
-    });*/
+    if (Platform.isIOS) {
+      // iOS-Verbindung zu Socket-Server.
+      // socket = io.io("ws://localhost:8001"
+      // "wss://socket-ios-backend-busfahrer.herokuapp.com"
+      socket = io.io(
+          "wss://socket-ios-backend-busfahrer.herokuapp.com", <String, dynamic>{
+        "transports": ["websocket"],
+      });
+    } else if (Platform.isAndroid) {
+      // Android-Verbindung zu Socket-Servers.
+      socket = io.io("ws://10.0.2.2:8001", <String, dynamic>{
+        "transports": ["websocket"],
+      });
+    } else {
+      socket = io.io("ws://localhost:8001", <String, dynamic>{
+        "transports": ["websocket"],
+      });
+    }
 
     socket.onConnect((_) {
       setState(() {
         connected = true;
+        loading = false;
       });
       _showDialogName(context);
-      print('Verbunden');
+      logger.e('Verbunden');
     });
 
     socket.onDisconnect((_) {
-      print('Getrennt');
+      logger.e('Getrennt');
     });
 
     // Hör auf Ereignisse vom Server und reagiere entsprechend.
@@ -97,11 +114,12 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
     socket.on('busfahrerUsername', (data) {
       setState(() {
         name = data;
+        loading = false;
       });
     });
 
-    socket.onConnectError((err) => print(err));
-    socket.onError((err) => print(err));
+    socket.onConnectError((err) => logger.e(err));
+    socket.onError((err) => logger.e(err));
 
     socket.on('roomBusfahrer', (data) {
       if (deck.isEmpty) {
@@ -133,6 +151,7 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
       }
       setState(() {
         roomBusfahrer = dataRoomBusfahrer;
+        loading = false;
       });
     });
 
@@ -164,22 +183,22 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
     });
 
     socket.on('keinRaumGefundenBusfahrer',
-        (data) => {_notifyError(context, 'Kein Raum gefunden')});
+        (data) => {notify.notifyError(context, 'Kein Raum gefunden')});
 
     socket.on('roomFullBusfahrer',
-        (data) => {_notifyError(context, 'Raum bereits voll')});
+        (data) => {notify.notifyError(context, 'Raum bereits voll')});
 
     socket.on('nameBesetztBusfahrer',
-        (data) => {_notifyError(context, 'Name bereits vergeben')});
+        (data) => {notify.notifyError(context, 'Name bereits vergeben')});
 
     socket.on('spielLaeuft',
-        (data) => {_notifyError(context, 'Spiel findet bereits statt')});
+        (data) => {notify.notifyError(context, 'Spiel findet bereits statt')});
 
     socket.on(
         'closeModal',
         (data) => {
               Navigator.pop(context),
-              _notifySuccess(context, 'Raum beigetreten')
+              notify.notifySuccess(context, 'Raum beigetreten')
             });
 
     socket.on(
@@ -195,6 +214,7 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
           }, */
               setState(() {
                 isBusfahrerDialogOpen = true;
+                loading = false;
               }),
               _showDialogBusfahrer(context),
               Future.delayed(const Duration(seconds: 15), () {
@@ -215,9 +235,17 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
+  }
+
+  @override
   void initState() {
     super.initState();
-    connectToServer();
+    Future.delayed(const Duration(seconds: 1), () {
+      connectToServer();
+    });
 
     animationControllers = List.generate(
       15,
@@ -256,6 +284,56 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  @override
+  void didPush() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  @override
+  void didPopNext() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  void _sendCurrentTabToAnalytics() {
+    widget.analytics.setCurrentScreen(
+      screenName: '/busfahrer',
+    );
+  }
+
+  void _showDialogSpielVerlassen(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Spiel verlassen?'),
+          content: const Text(
+              'Bist du sicher? Dein Spielstand wird nicht gespeichert'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Abbrechen'),
+            ),
+            TextButton(
+              onPressed: () {
+                socket.disconnect();
+                setState(() {
+                  connected = false;
+                });
+                Navigator.of(context).popUntil(ModalRoute.withName('/'));
+              },
+              child: const Text(
+                'Verlassen',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showDialogName(BuildContext context) {
     showDialog(
       context: context,
@@ -263,10 +341,10 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
         return WillPopScope(
           onWillPop: () async {
             // Check for input and prevent dismissal if no input is given
-            if (nameEingabe.isEmpty) {
+            /* if (nameEingabe.isEmpty) {
               return false;
             }
-            socket.emit("usernameBusfahrer", nameEingabe);
+            socket.emit("usernameBusfahrer", nameEingabe); */
             setState(() {
               nameEingabe = '';
             });
@@ -274,9 +352,7 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
             return true;
           },
           child: AlertDialog(
-            //title: Text('Raum beitreten'),
             content: TextField(
-              //controller: textEditingController,
               autofocus: true,
               onChanged: (value) {
                 setState(() {
@@ -314,7 +390,6 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          //title: Text('Raum beitreten'),
           content: TextField(
             autofocus: true,
             onChanged: (value) {
@@ -382,35 +457,37 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
     );
   }
 
-  void _notifyError(
-    BuildContext context,
-    String message,
-  ) {
-    Flushbar(
-      message: message,
-      duration: const Duration(seconds: 3),
-      backgroundColor: colors.red.withOpacity(0.9),
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      borderRadius: const BorderRadius.all(Radius.circular(10)),
-      flushbarPosition: FlushbarPosition.TOP,
-    ).show(context);
-  }
-
-  void _notifySuccess(
-    BuildContext context,
-    String message,
-  ) {
-    Flushbar(
-      message: message,
-      duration: const Duration(seconds: 3),
-      backgroundColor: colors.green.withOpacity(0.95),
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      borderRadius: const BorderRadius.all(Radius.circular(10)),
-      flushbarPosition: FlushbarPosition.TOP,
-    ).show(context);
+  void _showDialogRaumVerlassen(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: const Text('Raum verlassen?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Abbrechen'),
+            ),
+            TextButton(
+              onPressed: () {
+                _raumVerlassen();
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Verlassen',
+                style: TextStyle(color: Colors.red),
+              ),
+            )
+          ],
+        );
+      },
+    );
   }
 
   void _karteDrehen(int index, int row) {
+    print('Index: $index, Row: $row');
     //Todo: Überprüfen ob Ersteller!
     if (_ersteller()) {
       if (flipArray[index] == false) {
@@ -536,6 +613,24 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
     });
   }
 
+  void _raumVerlassen() {
+    if (roomBusfahrer.roomId.isNotEmpty && roomBusfahrer.spieler.isNotEmpty) {
+      List<SpielerBusfahrer> einSpielerList = roomBusfahrer.spieler
+          .where((einSpieler) => einSpieler.name == name)
+          .toList();
+
+      socket.emit('leaveBusfahrer', {
+        'roomId': roomBusfahrer.roomId,
+        'spielerId': einSpielerList.first.id
+      });
+      setState(() {
+        roomBusfahrer =
+            RoomBusfahrer(roomId: '', deck: [], spieler: [], phase: 1);
+      });
+      _resetGameInfo();
+    }
+  }
+
   void _resetGameInfo() {
     n = 0;
     deck = [];
@@ -588,19 +683,119 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
     );
   }
 
+  List<Widget> createMeineKarten() {
+    List<Widget> widgetList = [
+      const Text("Meine\nKarten:"),
+      const SizedBox(height: 10.0),
+    ];
+
+    for (int i = 0; i < 3; i++) {
+      widgetList.add(
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              height: 60,
+              width: 40,
+              child: FlipCardReverse(
+                animationReverseController: animationReverseControllers[i],
+                frontChild: Image.asset(
+                    'images/cards/${deck.isNotEmpty ? deck[meineKarten[i]].card : 'herz2'}.png'),
+              ),
+            ),
+            Text(
+              '${trinkzahlArray[i] > 0 ? trinkzahlArray[i] : ''}',
+              style: const TextStyle(fontSize: 25),
+            )
+          ],
+        ),
+      );
+    }
+
+    return widgetList;
+  }
+
+  List<Widget> createCardRow(int startIndex, int endIndex, int row) {
+    List<Widget> widgetList = [];
+
+    for (int i = startIndex; i <= endIndex; i++) {
+      widgetList.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 1.0),
+          child: SizedBox(
+              height: 60,
+              width: 40,
+              child: FlipCard(
+                animationController: animationControllers[i],
+                frontChild: Image.asset(
+                    'images/cards/${deck.isNotEmpty ? deck[i].card : 'herz2'}.png'),
+                onButtonPressed: _karteDrehen,
+                index: i,
+                row: row,
+              )),
+        ),
+      );
+    }
+
+    return widgetList;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        backgroundColor: colors.bluegray,
-        appBar: AppBar(
-            title: const Text("Busfahrer"),
-            centerTitle: true,
-            backgroundColor: colors.teal,
-            foregroundColor: Colors.black),
-        body: Center(
-          child: Stack(
-            children: [
-              Container(
+    double screenWidth = MediaQuery.of(context).size.width;
+    double varFontSize;
+    double screenHeight = MediaQuery.of(context).size.height;
+    double cardHeight;
+    double cardWidth;
+
+    // Calculate font size based on screen width
+    if (screenWidth < 300) {
+      varFontSize = 12.0;
+    } else if (screenWidth < 325) {
+      varFontSize = 13.0;
+    } else if (screenWidth < 350) {
+      varFontSize = 14.0;
+    } else if (screenWidth < 375) {
+      varFontSize = 15.0;
+    } else if (screenWidth < 400) {
+      varFontSize = 16.0;
+      cardWidth = 40;
+    } else {
+      varFontSize = 18.0;
+    }
+
+    if (screenHeight > 800) {
+      cardHeight = 60;
+    } else if (screenHeight > 750) {
+      cardHeight = 58;
+    } else if (screenHeight > 700) {
+      cardHeight = 56;
+    }
+
+    return Stack(
+      children: [
+        Scaffold(
+            backgroundColor: colors.bluegray,
+            appBar: AppBar(
+                title: const Text("Busfahrer"),
+                leading: IconButton(
+                  icon: const Icon(Icons
+                      .arrow_back_ios_new_rounded), // Replace with your custom icon
+                  onPressed: () {
+                    // Define the behavior when the custom back button is pressed
+                    _showDialogSpielVerlassen(context);
+                  },
+                ),
+                centerTitle: true,
+                backgroundColor: colors.teal,
+                foregroundColor: Colors.black,
+                actions: [
+                  AnleitungenButton()
+                  // You can add more icons here if needed
+                ]),
+            resizeToAvoidBottomInset: false,
+            body: Center(
+              child: Container(
                 width: MediaQuery.of(context).size.width * 0.95,
                 padding: const EdgeInsets.only(top: 10.0),
                 child: Column(
@@ -612,46 +807,29 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
                             width: (MediaQuery.of(context).size.width * 0.28),
                             color: colors.teal,
                             onPressed: () {
-                              if (roomBusfahrer.roomId.isEmpty) {
+                              if (name.isNotEmpty && roomBusfahrer.roomId.isEmpty) {
                                 socket.emit("createRoomBusfahrer", name);
                               }
                             },
+                            enabled: name.isNotEmpty && roomBusfahrer.roomId.isEmpty,
                             child: const Text(strings.rErstellen)),
                         AnimatedButton(
                             width: (MediaQuery.of(context).size.width * 0.28),
                             color: colors.teal,
                             onPressed: () {
-                              if (roomBusfahrer.roomId.isEmpty) {
+                              if (name.isNotEmpty && roomBusfahrer.roomId.isEmpty) {
                                 _showDialogRaumBeitreten(context);
                               }
                             },
+                            enabled: name.isNotEmpty && roomBusfahrer.roomId.isEmpty,
                             child: const Text(strings.rBeitreten)),
                         AnimatedButton(
                             width: (MediaQuery.of(context).size.width * 0.28),
                             color: colors.red,
                             onPressed: () {
-                              if (roomBusfahrer.roomId.isNotEmpty &&
-                                  roomBusfahrer.spieler.isNotEmpty) {
-                                List<SpielerBusfahrer> einSpielerList =
-                                    roomBusfahrer.spieler
-                                        .where((einSpieler) =>
-                                            einSpieler.name == name)
-                                        .toList();
-
-                                socket.emit('leaveBusfahrer', {
-                                  'roomId': roomBusfahrer.roomId,
-                                  'spielerId': einSpielerList.first.id
-                                });
-                                setState(() {
-                                  roomBusfahrer = RoomBusfahrer(
-                                      roomId: '',
-                                      deck: [],
-                                      spieler: [],
-                                      phase: 1);
-                                });
-                                _resetGameInfo();
-                              }
+                              _showDialogRaumVerlassen(context);
                             },
+                            enabled: name.isNotEmpty && roomBusfahrer.roomId.isNotEmpty,
                             child: const Text(
                               strings.rVerlassen,
                               style: TextStyle(color: Colors.white),
@@ -699,8 +877,7 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 children: [
                                   Opacity(
-                                    opacity: roomBusfahrer.roomId.isEmpty &&
-                                            name.isNotEmpty
+                                    opacity: roomBusfahrer.roomId.isEmpty
                                         ? 1.0
                                         : 0.0,
                                     child: TextButton(
@@ -741,299 +918,93 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Column(
-                                  children: [
-                                    const Text("Meine\nKarten:"),
-                                    const SizedBox(height: 10.0),
-                                    Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        SizedBox(
-                                            height: 60,
-                                            width: 40,
-                                            child: FlipCardReverse(
-                                                animationReverseController:
-                                                    animationReverseControllers[
-                                                        0],
-                                                frontChild: Image.asset(
-                                                    'images/cards/${deck.isNotEmpty ? deck[meineKarten[0]].card : 'herz2'}.png'))),
-                                        Text(
-                                          '${trinkzahlArray[0] > 0 ? trinkzahlArray[0] : ''}',
-                                          style: const TextStyle(fontSize: 25),
-                                        )
-                                      ],
-                                    ),
-                                    Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        SizedBox(
-                                            height: 60,
-                                            width: 40,
-                                            child: FlipCardReverse(
-                                                animationReverseController:
-                                                    animationReverseControllers[
-                                                        1],
-                                                frontChild: Image.asset(
-                                                    'images/cards/${deck.isNotEmpty ? deck[meineKarten[1]].card : 'herz2'}.png'))),
-                                        Text(
-                                          '${trinkzahlArray[1] > 0 ? trinkzahlArray[1] : ''}',
-                                          style: const TextStyle(fontSize: 25),
-                                        )
-                                      ],
-                                    ),
-                                    Stack(
-                                      alignment: Alignment.center,
-                                      children: [
-                                        SizedBox(
-                                            height: 60,
-                                            width: 40,
-                                            child: FlipCardReverse(
-                                                animationReverseController:
-                                                    animationReverseControllers[
-                                                        2],
-                                                frontChild: Image.asset(
-                                                    'images/cards/${deck.isNotEmpty ? deck[meineKarten[2]].card : 'herz2'}.png'))),
-                                        Text(
-                                          '${trinkzahlArray[2] > 0 ? trinkzahlArray[2] : ''}',
-                                          style: const TextStyle(fontSize: 25),
-                                        )
-                                      ],
-                                    )
-                                  ],
+                                  children: createMeineKarten(),
                                 ),
                                 Column(
                                   children: [
-                                    Row(children: [
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[14],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[14].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 14,
-                                            row: 5,
-                                          )),
-                                    ]),
-                                    Row(children: [
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[12],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[12].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 12,
-                                            row: 4,
-                                          )),
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[13],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[13].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 13,
-                                            row: 4,
-                                          ))
-                                    ]),
-                                    Row(children: [
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[9],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[9].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 9,
-                                            row: 3,
-                                          )),
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[10],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[10].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 10,
-                                            row: 3,
-                                          )),
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[11],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[11].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 11,
-                                            row: 3,
-                                          ))
-                                    ]),
-                                    Row(children: [
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[5],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[5].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 5,
-                                            row: 2,
-                                          )),
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[6],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[6].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 6,
-                                            row: 2,
-                                          )),
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[7],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[7].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 7,
-                                            row: 2,
-                                          )),
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[8],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[8].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 8,
-                                            row: 2,
-                                          ))
-                                    ]),
-                                    Row(children: [
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[0],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[0].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 0,
-                                            row: 1,
-                                          )),
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[1],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[1].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 1,
-                                            row: 1,
-                                          )),
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[2],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[2].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 2,
-                                            row: 1,
-                                          )),
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[3],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[3].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 3,
-                                            row: 1,
-                                          )),
-                                      SizedBox(
-                                          height: 60,
-                                          width: 40,
-                                          child: FlipCard(
-                                            animationController:
-                                                animationControllers[4],
-                                            frontChild: Image.asset(
-                                                'images/cards/${deck.isNotEmpty ? deck[4].card : 'herz2'}.png'),
-                                            onButtonPressed: _karteDrehen,
-                                            index: 4,
-                                            row: 1,
-                                          ))
-                                    ]),
+                                    Row(children: createCardRow(14, 14, 5)),
+                                    Row(children: createCardRow(12, 13, 4)),
+                                    Row(children: createCardRow(9, 11, 3)),
+                                    Row(children: createCardRow(5, 8, 2)),
+                                    Row(children: createCardRow(0, 4, 1)),
                                   ],
                                 ),
                               ],
                             ),
                           ),
-                          Visibility(
-                              visible:
-                                  roomBusfahrer.phase == 3 && correctInRow < 5,
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Center(
-                                    child: Column(
-                                      children: [
-                                        Text("Busfahrer: $busfahrer", style: const TextStyle(fontSize: 20)),
-                                        const SizedBox(height: 16.0),
-                                        SizedBox(
-                                          height: MediaQuery.of(context)
-                                                  .size
-                                                  .height *
-                                              0.3,
-                                          child: Image.asset(deck.isNotEmpty
-                                              ? 'images/cards/${deck[n].card}.png'
-                                              : 'images/cards/back2.png'),
-                                        ),
-                                        const SizedBox(height: 16.0),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 20.0),
-                                          width: MediaQuery.of(context)
-                                                  .size
-                                                  .width *
-                                              0.89,
-                                          child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                Column(
-                                                  children: [
-                                                    Opacity(
+                          Expanded(
+                            child: Visibility(
+                                visible:
+                                roomBusfahrer.phase == 3 && correctInRow < 5,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceAround,
+                                        children: [
+                                          Text("Busfahrer: $busfahrer",
+                                              style: TextStyle(
+                                                  fontSize: varFontSize)),
+                                          AnimatedSwitcher(
+                                              duration: const Duration(
+                                                  milliseconds: 400),
+                                              transitionBuilder:
+                                                  (child, animation) {
+                                                return FadeTransition(
+                                                  opacity: animation,
+                                                  child: child,
+                                                );
+                                              },
+                                              child: Container(
+                                                key: ValueKey<int>(
+                                                    deck.isNotEmpty
+                                                        ? deck[n].id
+                                                        : 0),
+                                                height: MediaQuery.of(context)
+                                                        .size
+                                                        .height *
+                                                    0.28,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black
+                                                          .withOpacity(
+                                                              0.4), // Shadow color and opacity
+                                                      spreadRadius:
+                                                          2, // How far the shadow spreads
+                                                      blurRadius:
+                                                          5, // The blur radius of the shadow
+                                                      offset: const Offset(0,
+                                                          3), // Offset of the shadow (x, y)
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Image.asset(
+                                                    'images/cards/${deck.isNotEmpty ? deck[n].card : 'herz2'}.png'),
+                                              )),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 20.0),
+                                            child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  AnimatedSwitcher(
+                                                    duration: const Duration(
+                                                        milliseconds: 400),
+                                                    transitionBuilder:
+                                                        (child, animation) {
+                                                      return FadeTransition(
+                                                          opacity: animation,
+                                                          child: child);
+                                                    },
+                                                    child: Opacity(
+                                                        key: ValueKey(correct),
                                                         opacity: correct != null
                                                             ? 1.0
                                                             : 0.0,
@@ -1057,28 +1028,46 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
                                                                       borderRadius:
                                                                           BorderRadius.circular(
                                                                               25.0))),
-                                                          child: Text(correct ==
-                                                                  true
-                                                              ? correct == false
-                                                                  ? ''
-                                                                  : 'Richtig'
-                                                              : 'Falsch', style: const TextStyle(fontSize: 20)),
+                                                          child: Text(
+                                                              correct == true
+                                                                  ? correct ==
+                                                                          false
+                                                                      ? ''
+                                                                      : 'Richtig'
+                                                                  : 'Falsch',
+                                                              style: TextStyle(
+                                                                  fontSize:
+                                                                      varFontSize)),
                                                         )),
-                                                  ],
-                                                ),
-                                                Column(
-                                                  children: [
-                                                    Text(
-                                                        "Richtig in Folge: $correctInRow", style: const TextStyle(fontSize: 20)),
-                                                  ],
-                                                )
-                                              ]),
-                                        ),
-                                      ],
-                                    ),
-                                  )
-                                ],
-                              ))
+                                                  ),
+                                                  AnimatedSwitcher(
+                                                    duration: const Duration(
+                                                        milliseconds: 400),
+                                                    transitionBuilder:
+                                                        (child, animation) {
+                                                      return FadeTransition(
+                                                          opacity: animation,
+                                                          child: child);
+                                                    },
+                                                    child: Text(
+                                                        "Richtig in Folge: $correctInRow",
+                                                        // This key causes the AnimatedSwitcher to interpret this as a "new"
+                                                        // child each time the count changes, so that it will begin its animation
+                                                        // when the count changes.
+                                                        key: ValueKey<int>(
+                                                            correctInRow),
+                                                        style: TextStyle(
+                                                            fontSize:
+                                                                varFontSize)),
+                                                  ),
+                                                ]),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  ],
+                                )),
+                          )
                         ],
                       )),
                     ),
@@ -1094,7 +1083,10 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
                         children: [
                           AnimatedButton(
                               width: (MediaQuery.of(context).size.width * 0.95),
-                              color: (roomBusfahrer.phase == 2 && !flipArray[14]) ? colors.teal.withOpacity(0.5) : colors.teal,
+                              color:
+                                  (roomBusfahrer.phase == 2 && !flipArray[14])
+                                      ? colors.teal.withOpacity(0.5)
+                                      : colors.teal,
                               onPressed: () {
                                 if (roomBusfahrer.phase == 1) {
                                   List<Cards> deck = createDeck();
@@ -1103,7 +1095,8 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
                                     'roomId': roomBusfahrer.roomId,
                                     'deck': jsonEncode(deck)
                                   });
-                                } else if (roomBusfahrer.phase == 2 && flipArray[14]) {
+                                } else if (roomBusfahrer.phase == 2 &&
+                                    flipArray[14]) {
                                   socket.emit("busfahren",
                                       {'roomId': roomBusfahrer.roomId});
                                 } else if (roomBusfahrer.phase == 3) {
@@ -1159,17 +1152,17 @@ class _BusfahrerState extends State<Busfahrer> with TickerProviderStateMixin {
                   ],
                 ),
               ),
-              if (loading)
-                Container(
-                  color: Colors.black
-                      .withOpacity(0.1), // Semi-transparent overlay color
-                  child: const Center(
-                    child:
-                        CircularProgressIndicator(), // Loading indicator
-                  ),
-                ),
-            ],
+            )),
+        if (loading)
+          Container(
+            color:
+                Colors.black.withOpacity(0.3), // Background color with opacity
+            child: const Center(
+              child:
+                  CircularProgressIndicator(), // Replace with your overlay content
+            ),
           ),
-        ));
+      ],
+    );
   }
 }

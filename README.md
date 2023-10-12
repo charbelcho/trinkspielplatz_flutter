@@ -1,4 +1,4 @@
-# my_flutter_project
+# trinkspielplatz
 
 A new Flutter project.
 

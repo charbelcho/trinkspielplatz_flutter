@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:my_flutter_project/custom_widget.dart';
-import 'package:my_flutter_project/model/spieler_class.dart';
-import 'package:another_flushbar/flushbar.dart';
+import 'package:trinkspielplatz/custom_widget.dart';
+import 'package:trinkspielplatz/model/spieler_class.dart';
+import 'package:trinkspielplatz/notify.dart';
 import 'assets/colors.dart' as colors;
 
 class SpielerPferderennenModal extends StatefulWidget {
@@ -11,10 +11,10 @@ class SpielerPferderennenModal extends StatefulWidget {
   const SpielerPferderennenModal({super.key, required this.spieler});
 
   @override
-  _SpielerPferderennenState createState() => _SpielerPferderennenState();
+  State<SpielerPferderennenModal> createState() => _SpielerPferderennenModalState();
 }
 
-class _SpielerPferderennenState extends State<SpielerPferderennenModal> {
+class _SpielerPferderennenModalState extends State<SpielerPferderennenModal> {
   TextEditingController nameController = TextEditingController();
   TextEditingController schluckeController = TextEditingController();
   String zeichenAuswahl = '';
@@ -37,24 +37,10 @@ class _SpielerPferderennenState extends State<SpielerPferderennenModal> {
     super.dispose();
   }
 
-  void _notifyError(
-    BuildContext context,
-    String message,
-  ) {
-    Flushbar(
-      message: message,
-      duration: const Duration(seconds: 3),
-      backgroundColor: colors.red.withOpacity(0.9),
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      borderRadius: const BorderRadius.all(Radius.circular(10)),
-      flushbarPosition: FlushbarPosition.TOP,
-    ).show(context);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colors.bluegray,
       appBar: AppBar(
           title: const Text("Spieler hinzufügen"),
           centerTitle: true,
@@ -71,44 +57,60 @@ class _SpielerPferderennenState extends State<SpielerPferderennenModal> {
                 children: [
                   Text('Spieler',
                       style:
-                          TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                          TextStyle(fontSize: 22, color: colors.teal, fontWeight: FontWeight.w800)),
                 ],
               ),
-              const Divider(thickness: 1.0,),
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.4,
-                child: ListView.builder(
-                  itemCount: widget.spieler.length,
-                  itemBuilder: (context, index) {
-                    final spieler = widget.spieler[index];
-                    return Dismissible(
-                      // Specify the direction to swipe and delete
-                      direction: DismissDirection.endToStart,
-                      key: Key(spieler.name),
-                      onDismissed: (direction) {
-                        // Removes that item the list on swipwe
-                        setState(() {
-                          widget.spieler.removeAt(index);
-                        });
-                        // Shows the information on Snackbar
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text('${spieler.name} gelöscht')));
-                      },
-                      background: Container(color: Colors.red, child: const Padding(
-                        padding: EdgeInsets.only(right: 15.0),
-                        child: Align(alignment: Alignment.centerRight, child: Icon(Icons.delete)),
-                      ),),
-                      child: ListTile(
-                          title: Text(
-                              '${spieler.name} wettet ${spieler.schlucke} Schluck/e auf ${spieler.zeichen}')),
-                    );
-                  },
+              const SizedBox(height: 16.0),
+              Expanded(
+                child: Container(
+                  //height: MediaQuery.of(context).size.height * 0.4,
+                  decoration: ShapeDecoration(
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(3.0))),
+                  child: ListView.builder(
+                    itemCount: widget.spieler.length,
+                    itemBuilder: (context, index) {
+                      final spieler = widget.spieler[index];
+                      Color? bgColor =
+                          index.isEven ? Colors.white : Colors.grey[200];
+                      return Dismissible(
+                        // Specify the direction to swipe and delete
+                        direction: DismissDirection.endToStart,
+                        key: Key(spieler.name),
+                        onDismissed: (direction) {
+                          // Removes that item the list on swipwe
+                          setState(() {
+                            widget.spieler.removeAt(index);
+                          });
+                          // Shows the information on Snackbar
+                          /* ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('${spieler.name} gelöscht'))); */
+                              notify.notifyError(
+                              context, '${spieler.name} gelöscht');
+                        },
+                        background: Container(color: Colors.red, child: const Padding(
+                          padding: EdgeInsets.only(right: 15.0),
+                          child: Align(alignment: Alignment.centerRight, child: Icon(Icons.delete)),
+                        ),),
+                        child: Container(
+                          color: bgColor,
+                          child: ListTile(
+                              title: Text(
+                                  '${spieler.name} wettet ${spieler.schlucke} Schluck/e auf ${spieler.zeichen}')),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
-              const Divider(thickness: 1.0,),
+              const SizedBox(height: 16.0),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 5.0),
                 child: TextField(
+                  inputFormatters: [
+                    LengthLimitingTextInputFormatter(30), // Limit input to 30 characters
+                  ],
                   controller: nameController,
                   autofocus: true,
                   onChanged: (value) {
@@ -118,6 +120,8 @@ class _SpielerPferderennenState extends State<SpielerPferderennenModal> {
                   },
                   decoration: const InputDecoration(
                     hintText: 'Name eingeben...',
+                    filled: true, // Set to true to enable background color
+                    fillColor: Colors.white,
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -128,7 +132,8 @@ class _SpielerPferderennenState extends State<SpielerPferderennenModal> {
                   controller: schluckeController,
                   inputFormatters: <TextInputFormatter>[
                     FilteringTextInputFormatter
-                        .digitsOnly, // Allow only numeric input
+                        .digitsOnly,
+                    LengthLimitingTextInputFormatter(2), // Allow only numeric input
                   ],
                   keyboardType: TextInputType.number,
                   onChanged: (value) {
@@ -138,16 +143,21 @@ class _SpielerPferderennenState extends State<SpielerPferderennenModal> {
                   },
                   decoration: const InputDecoration(
                     hintText: 'Schlucke eingeben...',
+                    filled: true, // Set to true to enable background color
+                    fillColor: Colors.white,
                     border: OutlineInputBorder(),
                   ),
                 ),
               ),
-              CustomRadioButtonGroup(
-                  options: const ['Herz', 'Kreuz', 'Karo', 'Pik'],
-                  zeichenAuswahl: zeichenAuswahl,
-                  onChanged: handleOptionChanged),
               Padding(
-                padding: const EdgeInsets.only(top: 20.0),
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: CustomRadioButtonGroup(
+                    options: const ['Herz', 'Kreuz', 'Karo', 'Pik'],
+                    zeichenAuswahl: zeichenAuswahl,
+                    onChanged: handleOptionChanged),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
@@ -158,12 +168,18 @@ class _SpielerPferderennenState extends State<SpielerPferderennenModal> {
                       onPressed: () {
                         setState(() {
                           if (nameEingabe.isEmpty) {
-                            _notifyError(context, 'Kein Name eingegeben');
+                            notify.notifyError(context, 'Kein Name eingegeben');
                           } else if (schluckeEingabe == 0 ||
                               schluckeController.text.isEmpty) {
-                            _notifyError(context, 'Schlucke eingeben');
+                            notify.notifyError(context, 'Keine Schlucke eingegeben');
                           } else if (zeichenAuswahl.isEmpty) {
-                            _notifyError(context, 'Kein Zeichen ausgewählt');
+                            notify.notifyError(context, 'Kein Zeichen ausgewählt');
+                          } else if (widget.spieler
+                              .where((einSpieler) =>
+                                  einSpieler.name == nameEingabe)
+                              .toList()
+                              .isNotEmpty) {
+                            notify.notifyError(context, 'Name bereits vergeben');
                           } else {
                             widget.spieler.add(SpielerPferderennen(
                                 id: '',

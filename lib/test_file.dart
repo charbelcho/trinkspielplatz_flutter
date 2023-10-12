@@ -1,60 +1,82 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-class FlipAnimation extends StatefulWidget {
-  const FlipAnimation({super.key});
-
+class BannerExample extends StatefulWidget {
+  const BannerExample({Key? key}) : super(key: key);
 
   @override
-  _FlipAnimationState createState() => _FlipAnimationState();
+  State<BannerExample> createState() => _BannerExampleState();
 }
 
-class _FlipAnimationState extends State<FlipAnimation>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
+class _BannerExampleState extends State<BannerExample> {
+  BannerAd? bannerAd;
+  bool _isLoaded = false;
+
+  // TODO: replace this test ad unit with your own ad unit.
+  final adUnitId = Platform.isAndroid
+      ? 'ca-app-pub-5545282755961898/8024751131'
+      : 'ca-app-pub-3940256099942544/2934735716';
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-
-    // Starts the animation when the widget is built
-    _animationController.forward();
+    loadAd();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     super.dispose();
+  }
+
+  /// Loads a banner ad.
+  void loadAd() {
+    bannerAd = BannerAd(
+      adUnitId: adUnitId,
+      request: const AdRequest(),
+      size: AdSize.largeBanner,
+      listener: BannerAdListener(
+        // Called when an ad is successfully received.
+        onAdLoaded: (ad) {
+          debugPrint('$ad loaded.');
+          setState(() {
+            _isLoaded = true;
+          });
+        },
+        // Called when an ad request failed.
+        onAdFailedToLoad: (ad, err) {
+          debugPrint('BannerAd failed to load: $err');
+          // Dispose the ad here to free resources.
+          ad.dispose();
+        },
+        // Called when an ad opens an overlay that covers the screen.
+        onAdOpened: (Ad ad) {},
+        // Called when an ad removes an overlay that covers the screen.
+        onAdClosed: (Ad ad) {},
+        // Called when an impression occurs on the ad.
+        onAdImpression: (Ad ad) {},
+      ),
+    )..load();
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        // Reverse the animation when the widget is tapped
-        if (_animationController.isCompleted) {
-          _animationController.reverse();
-        } else {
-          _animationController.forward();
-        }
-      },
-      child: AnimatedBuilder(
-        animation: _animationController,
-        builder: (context, child) {
-          return Transform(
-            alignment: FractionalOffset.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001) // Perspective
-              ..rotateY(3.14), // Rotation
-            child: _animationController.value < 0.5
-                ? Image.asset('images/cards/herz2.png') // Display front content
-                : Image.asset('images/cards/back2.png'), // Display back content
-          );
-        },
-      ),
-    );
+    return bannerAd != null
+        ? SafeArea(
+            child: Center(
+              child: Column(
+                children: [
+                  SizedBox(height: 8.0,),
+                  SizedBox(
+                    width: bannerAd!.size.width.toDouble(),
+                    height: bannerAd!.size.height.toDouble(),
+                    child: AdWidget(ad: bannerAd!),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : const SizedBox();
   }
 }

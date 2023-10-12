@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "466335157884",
+    "firebase_url": "https://iostrinkspielplatz-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "iostrinkspielplatz",
+    "storage_bucket": "iostrinkspielplatz.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:466335157884:android:3d5ad4b9b58266386b03f9",
+        "android_client_info": {
+          "package_name": "com.charbelchougourou.trinkspielplatz"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "466335157884-617phiig7thf4tm2mv9461q3q6c8gf7a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7KqcsEH3crzbc2puEviT9Zfzh6nfess4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "466335157884-617phiig7thf4tm2mv9461q3q6c8gf7a.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "466335157884-8smkvli73750qvh4o22oa7hq5ian3qgc.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "de.charbelchougourou.trinkspielplatz"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

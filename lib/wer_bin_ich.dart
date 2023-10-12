@@ -1,21 +1,32 @@
-import 'package:another_flushbar/flushbar.dart';
+import 'dart:io';
+
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
-import 'package:my_flutter_project/model/room_class.dart';
-import 'package:my_flutter_project/model/spieler_class.dart';
+import 'package:trinkspielplatz/ad_screen.dart';
+import 'package:trinkspielplatz/anleitungen.dart';
+import 'package:trinkspielplatz/logger.dart';
+import 'package:trinkspielplatz/model/room_class.dart';
+import 'package:trinkspielplatz/model/spieler_class.dart';
+import 'package:trinkspielplatz/notify.dart';
+import 'package:trinkspielplatz/web_page_wrapper.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
-import 'package:my_flutter_project/three_d_button.dart';
+import 'package:trinkspielplatz/three_d_button.dart';
 import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 import 'model/data_class.dart';
 
 class WerBinIch extends StatefulWidget {
-  const WerBinIch({Key? key}) : super(key: key);
+  final FirebaseAnalyticsObserver observer;
+
+  const WerBinIch({Key? key, required this.observer}) : super(key: key);
 
   @override
-  _WerBinIchState createState() => _WerBinIchState();
+  State<WerBinIch> createState() => _WerBinIchState();
 }
 
-class _WerBinIchState extends State<WerBinIch> {
+class _WerBinIchState extends State<WerBinIch> with RouteAware {
+  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+  bool loading = true;
   String name = '';
   String nameEingabe = '';
   String raumIdEingabe = '';
@@ -27,32 +38,47 @@ class _WerBinIchState extends State<WerBinIch> {
   late io.Socket socket;
 
   void connectToServer() {
-    // iOS-Verbindung zu Socket-Server.
-    socket = io.io("ws://localhost:8000", <String, dynamic>{
-      "transports": ["websocket"],
-    });
-
-    // Android-Verbindung zu Socket-Servers.
-    /*socket = io.io("ws://10.0.2.2:8000", <String, dynamic>{
-      "transports": ["websocket"],
-    });*/
+    if (Platform.isIOS) {
+      // iOS-Verbindung zu Socket-Server.
+      socket =
+          io.io("wss://socket-ios-backend.herokuapp.com", <String, dynamic>{
+        "transports": ["websocket"],
+      });
+    } else if (Platform.isAndroid) {
+      // Android-Verbindung zu Socket-Servers.
+      socket = io.io("ws://10.0.2.2:8000", <String, dynamic>{
+        "transports": ["websocket"],
+      });
+    } else {
+      socket = io.io("ws://localhost:8000", <String, dynamic>{
+        "transports": ["websocket"],
+      });
+    }
 
     socket.onConnect((_) {
       setState(() {
         connected = true;
+        loading = false;
       });
       _showDialogName(context);
-      print('Verbunden');
+      logger.i('Verbunden');
     });
 
     socket.onDisconnect((_) {
-      print('Getrennt');
+      logger.i('Getrennt');
     });
 
     // Hör auf Ereignisse vom Server und reagiere entsprechend.
+    socket.on('loading', (data) {
+      setState(() {
+        loading = true;
+      });
+    });
+
     socket.on('werbinIchUsername', (data) {
       setState(() {
         name = data;
+        loading = false;
       });
     });
 
@@ -77,29 +103,42 @@ class _WerBinIchState extends State<WerBinIch> {
       }
       setState(() {
         roomWerBinIch = dataRoomWerBinIch;
+        loading = false;
       });
     });
 
-    socket.on('keinRaumGefunden', (data) => _notifyError(context, 'Kein Raum gefunden'));
+    socket.on('keinRaumGefunden',
+        (data) => notify.notifyError(context, 'Kein Raum gefunden'));
 
-    socket.on('roomFull', (data) => _notifyError(context, 'Raum bereits voll'));
+    socket.on(
+        'roomFull', (data) => notify.notifyError(context, 'Raum bereits voll'));
 
-    socket.on('nameBesetzt', (data) => _notifyError(context, 'Name bereits vergeben'));
+    socket.on('nameBesetzt',
+        (data) => notify.notifyError(context, 'Name bereits vergeben'));
 
     socket.on('speicherNamenFuer', (data) {
       setState(() {
         namenSpeichernFuerIndex = data;
+        loading = false;
       });
       _showDialogNamenSpeichern(context);
     });
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
+  }
+
+  @override
   void dispose() {
+    widget.observer.unsubscribe(this);
     // Schließe die Socket-Verbindung, wenn die App geschlossen oder die Seite gewechselt wird.
     socket.disconnect();
     setState(() {
       connected = false;
+      loading = false;
     });
     super.dispose();
   }
@@ -107,9 +146,60 @@ class _WerBinIchState extends State<WerBinIch> {
   @override
   void initState() {
     super.initState();
-    connectToServer();
+    Future.delayed(const Duration(seconds: 1), () {
+      connectToServer();
+    });
   }
-   
+
+  @override
+  void didPush() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  @override
+  void didPopNext() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  void _sendCurrentTabToAnalytics() {
+    analytics.setCurrentScreen(
+      screenName: '/wer_bin_ich',
+    );
+  }
+
+  void _showDialogSpielVerlassen(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Spiel verlassen?'),
+          content: const Text(
+              'Bist du sicher? Dein Spielstand wird nicht gespeichert'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Abbrechen'),
+            ),
+            TextButton(
+              onPressed: () {
+                socket.disconnect();
+                setState(() {
+                  connected = false;
+                });
+                Navigator.of(context).popUntil(ModalRoute.withName('/'));
+              },
+              child: const Text(
+                'Verlassen',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _showDialogName(BuildContext context) {
     showDialog(
@@ -118,20 +208,19 @@ class _WerBinIchState extends State<WerBinIch> {
         return WillPopScope(
           onWillPop: () async {
             // Check for input and prevent dismissal if no input is given
-            if (nameEingabe.isEmpty) {
+            /* if (nameEingabe.isEmpty) {
               return false;
             }
-            socket.emit("usernameWerbinIch", nameEingabe);
+            socket.emit("usernameWerbinIch", nameEingabe); */
             setState(() {
               nameEingabe = '';
             });
+
             Navigator.pop(context);
             return true;
           },
           child: AlertDialog(
-            //title: Text('Raum beitreten'),
             content: TextField(
-              //controller: textEditingController,
               autofocus: true,
               onChanged: (value) {
                 setState(() {
@@ -244,212 +333,302 @@ class _WerBinIchState extends State<WerBinIch> {
     );
   }
 
-  void _notifyError(
-    BuildContext context,
-    String message,
-  ) {
-    Flushbar(
-      message: message,
-      duration: const Duration(seconds: 3),
-      backgroundColor: colors.red.withOpacity(0.9),
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      borderRadius: const BorderRadius.all(Radius.circular(10)),
-      flushbarPosition: FlushbarPosition.TOP,
-    ).show(context);
+  void _showDialogWebView(BuildContext context, String url) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          contentPadding: const EdgeInsets.all(0.0),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 10.0, vertical: 24.0),
+          content: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.7,
+              width: MediaQuery.of(context).size.width * 0.99,
+              child: SafariWrapper(url: url)),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Schließen'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  void _notifySuccess(
-    BuildContext context,
-    String message,
-  ) {
-    Flushbar(
-      message: message,
-      duration: const Duration(seconds: 3),
-      backgroundColor: colors.green.withOpacity(0.95),
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      borderRadius: const BorderRadius.all(Radius.circular(10)),
-      flushbarPosition: FlushbarPosition.TOP,
-    ).show(context);
+  void _showDialogRaumVerlassen(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: const Text('Raum verlassen?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Abbrechen'),
+            ),
+            TextButton(
+              onPressed: () {
+                _raumVerlassen();
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Verlassen',
+                style: TextStyle(color: Colors.red),
+              ),
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  void _raumVerlassen() {
+    if (roomWerBinIch.spieler.isNotEmpty) {
+      List<SpielerWerBinIch> einSpielerList = roomWerBinIch.spieler
+          .where((einSpieler) => einSpieler.name == name)
+          .toList();
+
+      socket.emit('leave', {
+        'roomId': roomWerBinIch.roomId,
+        'spielerId': einSpielerList.first.id
+      });
+      setState(() {
+        roomWerBinIch = RoomWerBinIch(roomId: '', spieler: []);
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        backgroundColor: colors.bluegray,
-        appBar: AppBar(
-            title: const Text("Wer bin ich?"),
-            centerTitle: true,
-            backgroundColor: colors.teal,
-            foregroundColor: Colors.black),
-        body: Center(
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.95,
-            padding: const EdgeInsets.only(top: 10.0),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    AnimatedButton(
-                        width: (MediaQuery.of(context).size.width * 0.28),
-                        color: colors.teal,
-                        onPressed: () {
-                          if (roomWerBinIch.roomId.isEmpty) {
-                            socket.emit("createRoom", name);
-                          }
-                        },
-                        child: const Text(strings.rErstellen)),
-                    AnimatedButton(
-                        width: (MediaQuery.of(context).size.width * 0.28),
-                        color: colors.teal,
-                        onPressed: () {
-                          if (roomWerBinIch.roomId.isEmpty) {
-                            _showDialogRaumBeitreten(context);
-                          }
-                        },
-                        child: const Text(strings.rBeitreten)),
-                    AnimatedButton(
-                        width: (MediaQuery.of(context).size.width * 0.28),
-                        color: colors.red,
-                        onPressed: () {
-                          if (roomWerBinIch.spieler.isNotEmpty) {
-                            List<SpielerWerBinIch> einSpielerList =
-                                roomWerBinIch.spieler
-                                    .where(
-                                        (einSpieler) => einSpieler.name == name)
-                                    .toList();
-
-                            socket.emit('leave', {
-                              'roomId': roomWerBinIch.roomId,
-                              'spielerId': einSpielerList.first.id
-                            });
-                            setState(() {
-                              roomWerBinIch =
-                                  RoomWerBinIch(roomId: '', spieler: []);
-                            });
-                          }
-                        },
-                        child: const Text(
-                          strings.rVerlassen,
-                          style: TextStyle(color: Colors.white),
-                        ))
-                  ],
+    return Stack(
+      children: [
+        Scaffold(
+            backgroundColor: colors.bluegray,
+            appBar: AppBar(
+                title: const Text("Wer bin ich?"),
+                leading: IconButton(
+                  icon: const Icon(Icons
+                      .arrow_back_ios_new_rounded), // Replace with your custom icon
+                  onPressed: () {
+                    // Define the behavior when the custom back button is pressed
+                    _showDialogSpielVerlassen(context);
+                  },
                 ),
-                Container(
-                  height: 400,
-                  margin: const EdgeInsets.only(top: 10.0),
-                  padding: const EdgeInsets.all(10.0),
-                  decoration: ShapeDecoration(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25.0),
-                          side:
-                              const BorderSide(width: 10, color: colors.teal))),
-                  child: Center(
-                      child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("Name: "),
-                              SizedBox(height: 5.0),
-                              Text("RaumID: "),
-                              SizedBox(height: 5.0),
-                              Text("Ersteller: ")
-                            ]),
-                        Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(name),
-                                const SizedBox(height: 5.0),
-                                Text(roomWerBinIch.roomId),
-                                const SizedBox(height: 5.0),
-                                Text(roomWerBinIch.spieler.isNotEmpty
-                                    ? roomWerBinIch.spieler.first.name
-                                    : '')
-                              ]),
-                        ),
-                        Column(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Opacity(
-                                opacity: roomWerBinIch.roomId.isEmpty &&
-                                        name.isNotEmpty
-                                    ? 1.0
-                                    : 0.0,
-                                child: TextButton(
-                                    child: const Text("Name\nbearb."),
-                                    onPressed: () {
-                                      if (roomWerBinIch.roomId.isEmpty) {
-                                        _showDialogName(context);
-                                      }
-                                    }),
-                              )
-                            ]),
-                      ]),
-                      const Divider(
-                        thickness: 1.0,
-                      ),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                centerTitle: true,
+                backgroundColor: colors.teal,
+                foregroundColor: Colors.black,
+                actions: [
+                  AnleitungenButton()
+                  // You can add more icons here if needed
+                ]),
+            resizeToAvoidBottomInset: false,
+            body: Center(
+              child: Container(
+                //width: MediaQuery.of(context).size.width * 0.95,
+                padding: const EdgeInsets.only(top: 10.0),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.95,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          for (var einSpieler in roomWerBinIch.spieler)
-                            Column(
-                              children: [
-                                Text(
-                                  '${einSpieler.name} : ${einSpieler.name == name && einSpieler.werbinich.text.isNotEmpty ? "**********" : einSpieler.werbinich.text}',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                                const SizedBox(height: 5.0),
-                              ],
-                            ),
+                          AnimatedButton(
+                              width: (MediaQuery.of(context).size.width * 0.28),
+                              color: colors.teal,
+                              onPressed: () {
+                                if (roomWerBinIch.roomId.isEmpty) {
+                                  socket.emit("createRoom", name);
+                                }
+                              },
+                              child: const Text(strings.rErstellen)),
+                          AnimatedButton(
+                              width: (MediaQuery.of(context).size.width * 0.28),
+                              color: colors.teal,
+                              onPressed: () {
+                                if (roomWerBinIch.roomId.isEmpty) {
+                                  _showDialogRaumBeitreten(context);
+                                }
+                              },
+                              child: const Text(strings.rBeitreten)),
+                          AnimatedButton(
+                              width: (MediaQuery.of(context).size.width * 0.28),
+                              color: colors.red,
+                              onPressed: () {
+                                _showDialogRaumVerlassen(context);
+                              },
+                              child: const Text(
+                                strings.rVerlassen,
+                                style: TextStyle(color: Colors.white),
+                              ))
                         ],
                       ),
-                    ],
-                  )),
+                    ),
+                    Expanded(
+                      child: Container(
+                        //height: 400,
+                        width: MediaQuery.of(context).size.width * 0.95,
+                        margin: const EdgeInsets.only(top: 10.0),
+                        padding: const EdgeInsets.all(10.0),
+                        decoration: ShapeDecoration(
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25.0),
+                                side: const BorderSide(
+                                    width: 10, color: colors.teal))),
+                        child: Center(
+                            child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Row(children: [
+                              const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text("Name: "),
+                                    SizedBox(height: 5.0),
+                                    Text("RaumID: "),
+                                    SizedBox(height: 5.0),
+                                    Text("Ersteller: ")
+                                  ]),
+                              Expanded(
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(name),
+                                      const SizedBox(height: 5.0),
+                                      Text(roomWerBinIch.roomId),
+                                      const SizedBox(height: 5.0),
+                                      Text(roomWerBinIch.spieler.isNotEmpty
+                                          ? roomWerBinIch.spieler.first.name
+                                          : '')
+                                    ]),
+                              ),
+                              Column(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    Opacity(
+                                      opacity: roomWerBinIch.roomId.isEmpty
+                                          ? 1.0
+                                          : 0.0,
+                                      child: TextButton(
+                                          child: const Text("Name\nbearb."),
+                                          onPressed: () {
+                                            if (roomWerBinIch.roomId.isEmpty) {
+                                              _showDialogName(context);
+                                            }
+                                          }),
+                                    )
+                                  ]),
+                            ]),
+                            const Divider(
+                              thickness: 1.0,
+                            ),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                for (var einSpieler in roomWerBinIch.spieler)
+                                  Column(
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            '${einSpieler.name} : ${einSpieler.name == name && einSpieler.werbinich.text.isNotEmpty ? "**********" : einSpieler.werbinich.text}',
+                                            textAlign: TextAlign.left,
+                                            style:
+                                                const TextStyle(fontSize: 18),
+                                          ),
+                                          if (einSpieler.name != name &&
+                                              einSpieler
+                                                  .werbinich.info.isNotEmpty)
+                                            IconButton(
+                                                onPressed: () {
+                                                  _showDialogWebView(
+                                                      context,
+                                                      einSpieler
+                                                          .werbinich.info);
+                                                },
+                                                icon: const Icon(Icons
+                                                    .info_outline_rounded)),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 5.0),
+                                    ],
+                                  ),
+                              ],
+                            ),
+                          ],
+                        )),
+                      ),
+                    ),
+                    const SizedBox(height: 8.0),
+                    SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.95,
+                      child: Opacity(
+                        opacity: roomWerBinIch.spieler.isNotEmpty
+                            ? roomWerBinIch.spieler.first.name == name
+                                ? 1.0
+                                : 0.0
+                            : 0.0,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            AnimatedButton(
+                                enabled: roomWerBinIch.spieler.length > 1,
+                                width:
+                                    (MediaQuery.of(context).size.width * 0.43),
+                                color: colors.teal,
+                                onPressed: () {
+                                  if (roomWerBinIch.spieler.length > 1) {
+                                    socket.emit('zufaellig',
+                                        {'roomId': roomWerBinIch.roomId});
+                                  }
+                                },
+                                child: const Text(strings.zufaellig)),
+                            AnimatedButton(
+                                enabled: roomWerBinIch.spieler.length > 1,
+                                width:
+                                    (MediaQuery.of(context).size.width * 0.43),
+                                color: colors.teal,
+                                onPressed: () {
+                                  if (roomWerBinIch.spieler.length > 1) {
+                                    socket.emit('zuweisen', {
+                                      {'roomId': roomWerBinIch.roomId}
+                                    });
+                                  }
+                                },
+                                child: const Text(strings.zuweisen))
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        AdScreen(),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8.0),
-                Opacity(
-                  opacity: roomWerBinIch.spieler.isNotEmpty
-                      ? roomWerBinIch.spieler.first.name == name
-                          ? 1.0
-                          : 0.0
-                      : 0.0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      AnimatedButton(
-                          width: (MediaQuery.of(context).size.width * 0.43),
-                          color: colors.teal,
-                          onPressed: () {
-                            if (roomWerBinIch.spieler.length > 1) {
-                              socket.emit('zufaellig',
-                                  {'roomId': roomWerBinIch.roomId});
-                            }
-                          },
-                          child: const Text(strings.zufaellig)),
-                      AnimatedButton(
-                          width: (MediaQuery.of(context).size.width * 0.43),
-                          color: colors.teal,
-                          onPressed: () {
-                            if (roomWerBinIch.spieler.length > 1) {
-                              socket.emit('zuweisen', {
-                                {'roomId': roomWerBinIch.roomId}
-                              });
-                            }
-                          },
-                          child: const Text(strings.zuweisen))
-                    ],
-                  ),
-                )
-              ],
+              ),
+            )),
+        if (loading)
+          Container(
+            color:
+                Colors.black.withOpacity(0.3), // Semi-transparent overlay color
+            child: const Center(
+              child: CircularProgressIndicator(), // Loading indicator
             ),
           ),
-        ));
+      ],
+    );
   }
 }

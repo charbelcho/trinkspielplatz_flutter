@@ -70,14 +70,14 @@ class CustomMultiSelectRadio extends StatefulWidget {
   final List<String> selectedOptions;
   final ValueChanged<List<String>> onChanged;
 
-  CustomMultiSelectRadio({
+  const CustomMultiSelectRadio({super.key, 
     required this.options,
     required this.selectedOptions,
     required this.onChanged,
   });
 
   @override
-  _CustomMultiSelectRadioState createState() => _CustomMultiSelectRadioState();
+  State<CustomMultiSelectRadio> createState() => _CustomMultiSelectRadioState();
 }
 
 class _CustomMultiSelectRadioState extends State<CustomMultiSelectRadio> {

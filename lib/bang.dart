@@ -1,20 +1,23 @@
-//import 'dart:js_interop';
-
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
+import 'package:trinkspielplatz/ad_screen.dart';
+import 'package:trinkspielplatz/anleitungen.dart';
 import 'dart:async';
 import 'dart:math';
-import 'package:my_flutter_project/three_d_button.dart';
+import 'package:trinkspielplatz/three_d_button.dart';
 import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Bang extends StatefulWidget {
-  const Bang({super.key});
+  final FirebaseAnalyticsObserver observer;
+  const Bang({Key? key, required this.observer}) : super(key: key);
 
   @override
   State<Bang> createState() => _BangState();
 }
 
-class _BangState extends State<Bang> {
+class _BangState extends State<Bang> with RouteAware {
+  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   late Timer timer;
   late Timer delayedTimer;
 
@@ -25,8 +28,41 @@ class _BangState extends State<Bang> {
   int timeSpieler2 = 0;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
+  }
+
+  @override
+  void dispose() {
+    timer.cancel();
+    delayedTimer.cancel();
+    timerRunning = false;
+    widget.observer.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
   void initState() {
+    timer = Timer(const Duration(milliseconds: 1), () {});
+    delayedTimer = Timer(const Duration(milliseconds: 1), () {});
     super.initState();
+  }
+
+  @override
+  void didPush() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  @override
+  void didPopNext() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  void _sendCurrentTabToAnalytics() {
+    analytics.setCurrentScreen(
+      screenName: '/bang',
+    );
   }
 
   void _startTimer() {
@@ -65,7 +101,7 @@ class _BangState extends State<Bang> {
     setState(() {
       timerRunning = null;
       seconds = 3;
-      
+
       timeSpieler1 = 0;
       timeSpieler2 = 0;
     });
@@ -98,9 +134,15 @@ class _BangState extends State<Bang> {
                         SizedBox(
                             height: MediaQuery.of(context).size.height * 0.05),
                         Text(
-                            "Spieler $spielerZuFrueh hat zu früh geschossen und trinkt $randomVerliererTrinkzahl Schluck/e!", style: const TextStyle(fontSize: 22, color: Colors.black, fontWeight: FontWeight.w500)),
+                            "Spieler $spielerZuFrueh hat zu früh geschossen und trinkt $randomVerliererTrinkzahl Schluck/e!",
+                            style: const TextStyle(
+                                fontSize: 22,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w500)),
                         SizedBox(
                             height: MediaQuery.of(context).size.height * 0.1),
+                        const Text('Spieler 1'),
+                        const SizedBox(height: 8.0),
                         Opacity(
                           opacity: buttonVisible ? 1.0 : 0.5,
                           child: AnimatedButton(
@@ -131,9 +173,15 @@ class _BangState extends State<Bang> {
                       SizedBox(
                           height: MediaQuery.of(context).size.height * 0.05),
                       Text(
-                          "Spieler $spielerZuFrueh hat zu früh geschossen und trinkt $randomVerliererTrinkzahl Schluck/e!", style: const TextStyle(fontSize: 22, color: Colors.black, fontWeight: FontWeight.w500)),
+                          "Spieler $spielerZuFrueh hat zu früh geschossen und trinkt $randomVerliererTrinkzahl Schluck/e!",
+                          style: const TextStyle(
+                              fontSize: 22,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500)),
                       SizedBox(
                           height: MediaQuery.of(context).size.height * 0.1),
+                      const Text('Spieler 2'),
+                      const SizedBox(height: 8.0),
                       Opacity(
                         opacity: buttonVisible ? 1.0 : 0.5,
                         child: AnimatedButton(
@@ -191,9 +239,15 @@ class _BangState extends State<Bang> {
                         SizedBox(
                             height: MediaQuery.of(context).size.height * 0.05),
                         Text(
-                            "Spieler $verlierer hat verloren und trinkt $randomVerliererTrinkzahl Schluck/e!", style: const TextStyle(fontSize: 22, color: Colors.black, fontWeight: FontWeight.w500)),
+                            "Spieler $verlierer hat verloren und trinkt $randomVerliererTrinkzahl Schluck/e!",
+                            style: const TextStyle(
+                                fontSize: 22,
+                                color: Colors.black,
+                                fontWeight: FontWeight.w500)),
                         SizedBox(
                             height: MediaQuery.of(context).size.height * 0.1),
+                        const Text('Spieler 1'),
+                        const SizedBox(height: 8.0),
                         Opacity(
                           opacity: buttonVisible ? 1.0 : 0.5,
                           child: AnimatedButton(
@@ -201,7 +255,7 @@ class _BangState extends State<Bang> {
                             color: colors.teal,
                             onPressed: () {
                               _resetState();
-                              
+
                               Navigator.pop(context);
                             },
                             child: const Text(
@@ -225,9 +279,15 @@ class _BangState extends State<Bang> {
                       SizedBox(
                           height: MediaQuery.of(context).size.height * 0.05),
                       Text(
-                          "Spieler $verlierer hat verloren und trinkt $randomVerliererTrinkzahl Schluck/e!", style: const TextStyle(fontSize: 22, color: Colors.black, fontWeight: FontWeight.w500)),
+                          "Spieler $verlierer hat verloren und trinkt $randomVerliererTrinkzahl Schluck/e!",
+                          style: const TextStyle(
+                              fontSize: 22,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500)),
                       SizedBox(
                           height: MediaQuery.of(context).size.height * 0.1),
+                      const Text('Spieler 2'),
+                      const SizedBox(height: 8.0),
                       Opacity(
                         opacity: buttonVisible ? 1.0 : 0.5,
                         child: AnimatedButton(
@@ -235,7 +295,7 @@ class _BangState extends State<Bang> {
                           color: colors.teal,
                           onPressed: () {
                             _resetState();
-                            
+
                             Navigator.pop(context);
                           },
                           child: const Text(
@@ -274,14 +334,6 @@ class _BangState extends State<Bang> {
   }
 
   @override
-  void dispose() {
-    timer.cancel();
-    delayedTimer.cancel();
-    timerRunning = false;
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
         backgroundColor: colors.bluegray,
@@ -289,54 +341,118 @@ class _BangState extends State<Bang> {
             title: const Text("BANG!"),
             centerTitle: true,
             backgroundColor: colors.teal,
-            foregroundColor: Colors.black),
+            foregroundColor: Colors.black,
+            actions: [
+              AnleitungenButton()
+              // You can add more icons here if needed
+            ]),
         body: Center(
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.95,
             padding: const EdgeInsets.only(top: 10.0),
             child: Column(
               children: [
-                Container(
-                  height: MediaQuery.of(context).size.height - 300.0,
-                  padding: const EdgeInsets.symmetric(vertical: 10.0),
-                  decoration: ShapeDecoration(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25.0),
-                          side:
-                              const BorderSide(width: 10, color: colors.teal))),
-                  child: Center(
-                      child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Transform.rotate(
-                        angle: 3.14159265359,
+                Expanded(
+                  child: Container(
+                    //height: MediaQuery.of(context).size.height,
+                    width: MediaQuery.of(context).size.width * 0.95,
+                    padding: const EdgeInsets.symmetric(vertical: 10.0),
+                    decoration: ShapeDecoration(
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25.0),
+                            side: const BorderSide(
+                                width: 10, color: colors.teal))),
+                    child: Center(
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Transform.rotate(
+                          angle: 3.14159265359,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text(
+                                  timerRunning == true
+                                      ? '$seconds'
+                                      : timerRunning == false
+                                          ? 'BANG!'
+                                          : strings.start,
+                                  style: const TextStyle(
+                                      fontSize: 70,
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.w900)),
+                              SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.1),
+                              const Text("Spieler 1"),
+                              const SizedBox(height: 8.0),
+                              AnimatedButton(
+                                width:
+                                    (MediaQuery.of(context).size.width * 0.85),
+                                color: colors.teal,
+                                onPressed: () {
+                                  if (timerRunning == null) {
+                                    _startTimer();
+                                  } else if (timerRunning == true) {
+                                    _showZufruehDialog(
+                                        context, 1, random.nextInt(5) + 1);
+                                    _stopTimer();
+                                  } else if (timerRunning == false) {
+                                    setState(() {
+                                      timeSpieler1 =
+                                          DateTime.now().millisecondsSinceEpoch;
+                                    });
+                                    _compareTime();
+                                    _stopTimer();
+                                  }
+                                },
+                                child: Text(
+                                  seconds != 3 || timerRunning == true
+                                      ? strings.bang
+                                      : strings.start,
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(
+                          thickness: 1.0,
+                        ),
+                        Column(
                           children: [
-                            Text(timerRunning == true
-                              ? '$seconds'
-                              : timerRunning == false
-                                  ? 'BANG!'
-                                  : strings.start, style: const TextStyle(fontSize: 70, color: Colors.black, fontWeight: FontWeight.w900)),
-                            SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-                            const Text("Spieler 1"),
+                            Text(
+                                timerRunning == true
+                                    ? '$seconds'
+                                    : timerRunning == false
+                                        ? 'BANG!'
+                                        : strings.start,
+                                style: const TextStyle(
+                                    fontSize: 70,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.w900)),
+                            SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.1),
+                            const Text("Spieler 2"),
                             const SizedBox(height: 8.0),
                             AnimatedButton(
                               width: (MediaQuery.of(context).size.width * 0.85),
                               color: colors.teal,
                               onPressed: () {
-                                if (timerRunning ==
-                                    null) {
+                                if (timerRunning == null) {
                                   _startTimer();
                                 } else if (timerRunning == true) {
                                   _showZufruehDialog(
-                                      context, 1, random.nextInt(5) + 1);
+                                      context, 2, random.nextInt(5) + 1);
                                   _stopTimer();
-                                } else if (timerRunning ==
-                                    false) {
+                                } else if (timerRunning == false) {
                                   setState(() {
-                                    timeSpieler1 =
+                                    timeSpieler2 =
                                         DateTime.now().millisecondsSinceEpoch;
                                   });
                                   _compareTime();
@@ -356,58 +472,12 @@ class _BangState extends State<Bang> {
                             ),
                           ],
                         ),
-                      ),
-                      const Divider(
-                        thickness: 1.0,
-                      ),
-                      Column(
-                        children: [
-                          Text(timerRunning == true
-                              ? '$seconds'
-                              : timerRunning == false
-                                  ? 'BANG!'
-                                  : strings.start, style: const TextStyle(fontSize: 70, color: Colors.black, fontWeight: FontWeight.w900)),
-                          SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-                          const Text("Spieler 2"),
-                          const SizedBox(height: 8.0),
-                          AnimatedButton(
-                            width: (MediaQuery.of(context).size.width * 0.85),
-                            color: colors.teal,
-                            onPressed: () {
-                              if (timerRunning ==
-                                  null) {
-                                _startTimer();
-                              } else if (timerRunning ==
-                                  true) {
-                                _showZufruehDialog(
-                                    context, 2, random.nextInt(5) + 1);
-                                _stopTimer();
-                              } else if (timerRunning ==
-                                  false) {
-                                setState(() {
-                                  timeSpieler2 =
-                                      DateTime.now().millisecondsSinceEpoch;
-                                });
-                                _compareTime();
-                                _stopTimer();
-                              }
-                            },
-                            child: Text(
-                              seconds != 3 || timerRunning == true
-                                  ? strings.bang
-                                  : strings.start,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                color: Colors.black,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  )),
+                      ],
+                    )),
+                  ),
                 ),
+                //SizedBox(height: 20.0,),
+                const AdScreen()
               ],
             ),
           ),

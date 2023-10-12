@@ -1,22 +1,28 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
-import 'package:my_flutter_project/model/spieler_class.dart';
-import 'package:my_flutter_project/spieler_einhundert_modal.dart';
-import 'package:my_flutter_project/three_d_button.dart';
+import 'package:trinkspielplatz/ad_screen.dart';
+import 'package:trinkspielplatz/notify.dart';
+import 'package:trinkspielplatz/anleitungen.dart';
+import 'package:trinkspielplatz/model/spieler_class.dart';
+import 'package:trinkspielplatz/spieler_einhundert_modal.dart';
+import 'package:trinkspielplatz/three_d_button.dart';
 import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Einhundert extends StatefulWidget {
-  const Einhundert({super.key});
+  final FirebaseAnalyticsObserver observer;
+  const Einhundert({Key? key, required this.observer}) : super(key:key);
 
   @override
   State<Einhundert> createState() => _EinhundertState();
 }
 
 class _EinhundertState extends State<Einhundert>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, RouteAware {
+  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   late AnimationController _controller;
   late Animation<double> _animation;
   late Timer timer;
@@ -35,7 +41,20 @@ class _EinhundertState extends State<Einhundert>
   bool textVisible = false;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
+  }
+
+  @override
+  void dispose() {
+    widget.observer.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
   void initState() {
+    timer = Timer(const Duration(milliseconds: 1), () {});
     super.initState();
 
     _controller = AnimationController(
@@ -49,13 +68,33 @@ class _EinhundertState extends State<Einhundert>
     ).chain(CurveTween(curve: Curves.linear)).animate(_controller);
 
     Future.delayed(const Duration(seconds: 1), () {
-      Navigator.of(context).push(
+      _openSpielerDialog();
+    });
+  }
+
+  @override
+  void didPush() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  @override
+  void didPopNext() {
+    _sendCurrentTabToAnalytics();
+  }
+
+  void _sendCurrentTabToAnalytics() {
+    analytics.setCurrentScreen(
+      screenName: '/einhundert',
+    );
+  }
+
+  void _openSpielerDialog() {
+    Navigator.of(context).push(
         MaterialPageRoute(
           builder: (BuildContext context) => SpielerEinhundertModal(
               spieler: spielerEinhundert, setName: _setName),
         ),
       );
-    });
   }
 
   bool _checkEmptySpielerAndPunkte() {
@@ -122,6 +161,8 @@ class _EinhundertState extends State<Einhundert>
           }
         });
       }
+    } else {
+      notify.notifyError(context, 'Füge mind. 2 Spieler hinzu');
     }
   }
 
@@ -221,112 +262,110 @@ class _EinhundertState extends State<Einhundert>
             title: const Text("100"),
             centerTitle: true,
             backgroundColor: colors.teal,
-            foregroundColor: Colors.black),
+            foregroundColor: Colors.black,
+            actions: [
+              IconButton(onPressed: _openSpielerDialog, icon: Icon(Icons.settings)),
+              AnleitungenButton()
+              // You can add more icons here if needed
+            ]),
+        resizeToAvoidBottomInset: false,
         body: Center(
           child: Container(
-            width: MediaQuery.of(context).size.width * 0.95,
             padding: const EdgeInsets.only(top: 10.0),
             child: Column(
               children: [
-                Container(
-                  height: 500,
-                  decoration: ShapeDecoration(
-                      color: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25.0),
-                          side:
-                              const BorderSide(width: 10, color: colors.teal))),
-                  child: Center(
-                      child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(10.0),
-                        child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Column(children: [
-                                const Text(
-                                  'Am Zug:',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                Text(spielerEinhundert.isNotEmpty
-                                    ? spielerEinhundert[n].name
-                                    : '')
-                              ]),
-                              Column(children: [
-                                const Text(
-                                  'Punkte:',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                Text(spielerEinhundert.isNotEmpty
-                                    ? '${spielerEinhundert[n].punkte}'
-                                    : '0'),
-                                const Text('aktuell:'),
-                                Text('$punkteEnde'),
-                              ]),
-                            ]),
-                      ),
-                      Expanded(
+                Expanded(
+                  child: Container(
+                    //height: 500,
+                    width: MediaQuery.of(context).size.width * 0.95,
+                    decoration: ShapeDecoration(
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25.0),
+                            side: const BorderSide(
+                                width: 10, color: colors.teal))),
+                    child: Center(
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            AnimatedBuilder(
-                              animation: _animation,
-                              builder: (context, child) {
-                                return Transform.rotate(
-                                  angle: _animation.value *
-                                      2 *
-                                      3.14159265359, // 2 * Pi
-                                  child: InkWell(
-                                      onTap: _wuerfeln,
-                                      child: Image.asset(
-                                          'images/wuerfel/wuerfel-$value1-black.png',
-                                          height: 200.0,
-                                          width: 200.0)),
-                                );
-                              },
-                            ),
-                            SizedBox(
-                              height: 40,
-                              width: 200,
-                              child: Text(textVisible ? text : ''),
-                            )
-                          ],
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Column(children: [
+                                  const Text(
+                                    'Am Zug:',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(spielerEinhundert.isNotEmpty
+                                      ? spielerEinhundert[n].name
+                                      : '')
+                                ]),
+                                Column(children: [
+                                  const Text(
+                                    'Punkte:',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  Text(spielerEinhundert.isNotEmpty
+                                      ? '${spielerEinhundert[n].punkte}'
+                                      : '0'),
+                                  const Text('aktuell:'),
+                                  Text('$punkteEnde'),
+                                ]),
+                              ]),
                         ),
-                      ),
-                    ],
-                  )),
-                ),
-                const SizedBox(height: 8.0),
-                Row(
-                  children: [
-                    Opacity(
-                      opacity: ((!rolling && _checkEmptySpielerAndPunkte()) ||
-                              naechsterSpieler
-                          ? 1.0
-                          : 0.0),
-                      child: AnimatedButton(
-                        width: (MediaQuery.of(context).size.width * 0.95),
-                        color: colors.teal,
-                        onPressed: () {
-                          _speichern();
-                        },
-                        child: Text(
-                          !naechsterSpieler
-                              ? strings.speichern
-                              : strings.naechsterSpieler,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            color: Colors.black,
-                            fontWeight: FontWeight.w500,
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              AnimatedBuilder(
+                                animation: _animation,
+                                builder: (context, child) {
+                                  return Transform.rotate(
+                                    angle: _animation.value *
+                                        2 *
+                                        3.14159265359, // 2 * Pi
+                                    child: InkWell(
+                                        onTap: _wuerfeln,
+                                        child: Image.asset(
+                                            'images/wuerfel/wuerfel-$value1-black.png',
+                                            height: 200.0,
+                                            width: 200.0)),
+                                  );
+                                },
+                              ),
+                              SizedBox(
+                                height: 40,
+                                width: 200,
+                                child: Text(textVisible ? text : ''),
+                              )
+                            ],
                           ),
                         ),
-                      ),
-                    )
-                  ],
-                )
+                      ],
+                    )),
+                  ),
+                ),
+                const SizedBox(height: 8.0),
+                AnimatedButton(
+                  enabled: (!rolling && _checkEmptySpielerAndPunkte()) ||
+                      naechsterSpieler,
+                  width: (MediaQuery.of(context).size.width * 0.95),
+                  color: colors.teal,
+                  onPressed: () {
+                    _speichern();
+                  },
+                  child: Text(
+                    !naechsterSpieler
+                        ? strings.speichern
+                        : strings.naechsterSpieler,
+                  ),
+                ),
+                const AdScreen()
               ],
             ),
           ),

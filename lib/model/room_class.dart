@@ -1,5 +1,5 @@
-import 'package:my_flutter_project/model/cards_class.dart';
-import 'package:my_flutter_project/model/spieler_class.dart';
+import 'package:trinkspielplatz/model/cards_class.dart';
+import 'package:trinkspielplatz/model/spieler_class.dart';
 
 class RoomWerBinIch {
   String roomId;

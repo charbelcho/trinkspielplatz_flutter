@@ -33,7 +33,7 @@ class AnimatedButton extends StatefulWidget {
         super(key: key);
 
   @override
-  _AnimatedButtonState createState() => _AnimatedButtonState();
+  State<AnimatedButton> createState() => _AnimatedButtonState();
 }
 
 class _AnimatedButtonState extends State<AnimatedButton> {
@@ -65,7 +65,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
                 decoration: BoxDecoration(
                     color: widget.enabled
                         ? darken(widget.color, widget.shadowDegree)
-                        : darken(Colors.grey, widget.shadowDegree),
+                        : darken(widget.color.withOpacity(0.5), widget.shadowDegree),
                     borderRadius: widget.shape != BoxShape.circle
                         ? const BorderRadius.all(
                       Radius.circular(25),
@@ -82,7 +82,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
                 height: buttonheight,
                 width: widget.width,
                 decoration: BoxDecoration(
-                    color: widget.enabled ? widget.color : Colors.grey,
+                    color: widget.enabled ? widget.color : widget.color.withOpacity(0.5),
                     borderRadius: widget.shape != BoxShape.circle
                         ? const BorderRadius.all(
                       Radius.circular(25),
