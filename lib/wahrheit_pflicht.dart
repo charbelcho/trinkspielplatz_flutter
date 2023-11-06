@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -14,15 +13,13 @@ import 'assets/strings.dart' as strings;
 import 'model/data_class.dart';
 
 class WahrheitPflicht extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-  const WahrheitPflicht({Key? key, required this.observer}) : super(key: key);
+  const WahrheitPflicht({Key? key}) : super(key: key);
 
   @override
   State<WahrheitPflicht> createState() => _WahrheitPflichtState();
 }
 
 class _WahrheitPflichtState extends State<WahrheitPflicht> with RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   int n = 0;
   int m = 0;
   final random = Random();
@@ -34,14 +31,7 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> with RouteAware {
   bool loadingPflicht = true;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
-
-  @override
   void dispose() {
-    widget.observer.unsubscribe(this);
     super.dispose();
   }
 
@@ -51,22 +41,6 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> with RouteAware {
 
     fetchDataWahrheit();
     fetchDataPflicht();
-  }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/wahrheit_pflicht',
-    );
   }
 
   Future<void> fetchDataWahrheit() async {

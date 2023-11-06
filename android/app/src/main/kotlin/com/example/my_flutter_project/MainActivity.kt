@@ -1,4 +1,4 @@
-package com.example.trinkspielplatz
+package com.charbelchougourou.trinkspielplatz
 
 import io.flutter.embedding.android.FlutterActivity
 

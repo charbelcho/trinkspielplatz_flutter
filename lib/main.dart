@@ -1,39 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:trinkspielplatz/analytics.dart';
-import 'firebase_options.dart';
 import 'assets/colors.dart' as colors;
 import 'home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MobileAds.instance.initialize();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
   MyApp({super.key});
 
-  final analytics = Analytics(FirebaseAnalytics.instance, FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance));
-
-  /* static FirebaseAnalytics analytics = FirebaseAnalytics.instance;
-  static FirebaseAnalyticsObserver observer =
-      FirebaseAnalyticsObserver(analytics: analytics); */
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       theme: ThemeData(scaffoldBackgroundColor: colors.bluegray),
-      navigatorObservers: <NavigatorObserver>[analytics.observer],
       home: HomeScreen(
-        title: 'Firebase Analytics Demo',
-        analytics: analytics.analytics,
-        observer: analytics.observer,
+        title: 'Firebase Analytics Demo'
       ),
     );
   }
@@ -42,7 +26,7 @@ class MyApp extends StatelessWidget {
 /* 
 import 'dart:async';
 
-import 'package:firebase_analytics/firebase_analytics.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -87,12 +71,12 @@ class MyHomePage extends StatefulWidget {
     Key? key,
     required this.title,
     required this.analytics,
-    required this.observer,
+    ,
   }) : super(key: key);
 
   final String title;
   final FirebaseAnalytics analytics;
-  final FirebaseAnalyticsObserver observer;
+  
 
   @override
   _MyHomePageState createState() => _MyHomePageState();

@@ -7,8 +7,8 @@ import 'assets/colors.dart' as colors;
 
 class SpielerPferderennenModal extends StatefulWidget {
   final List<SpielerPferderennen> spieler;
-
-  const SpielerPferderennenModal({super.key, required this.spieler});
+  bool? loading;
+  SpielerPferderennenModal({super.key, required this.spieler, required this.loading});
 
   @override
   State<SpielerPferderennenModal> createState() => _SpielerPferderennenModalState();
@@ -30,6 +30,9 @@ class _SpielerPferderennenModalState extends State<SpielerPferderennenModal> {
   @override
   void initState() {
     super.initState();
+    setState(() {
+      widget.loading = false;
+    });
   }
 
   @override

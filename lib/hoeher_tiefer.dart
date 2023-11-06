@@ -1,4 +1,4 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+
 import 'package:flutter/material.dart';
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/anleitungen.dart';
@@ -8,30 +8,25 @@ import 'package:trinkspielplatz/three_d_button.dart';
 import 'assets/colors.dart' as colors;
 
 class HoeherTiefer extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-  const HoeherTiefer({Key? key, required this.observer}) : super(key: key);
+  const HoeherTiefer({super.key});
 
   @override
   State<HoeherTiefer> createState() => _HoeherTieferState();
 }
 
 class _HoeherTieferState extends State<HoeherTiefer> with RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+  
   int n = 0;
   List<Cards> deck = [];
 
   bool? correct;
   int correctInRow = 0;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
+  
 
   @override
   void dispose() {
-    widget.observer.unsubscribe(this);
+    
     super.dispose();
   }
 
@@ -40,22 +35,6 @@ class _HoeherTieferState extends State<HoeherTiefer> with RouteAware {
     super.initState();
     deck = createDeck();
     deck.shuffle();
-  }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/hoeher_tiefer',
-    );
   }
 
   void _correctFunc() {

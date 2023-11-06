@@ -1,4 +1,3 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/anleitungen.dart';
@@ -15,8 +14,7 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Pferderennen extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-  const Pferderennen({Key?key, required this.observer}) : super(key: key);
+  const Pferderennen({Key? key}) : super(key: key);
 
   @override
   State<Pferderennen> createState() => _PferderennenState();
@@ -24,13 +22,12 @@ class Pferderennen extends StatefulWidget {
 
 class _PferderennenState extends State<Pferderennen>
     with TickerProviderStateMixin, RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
-  
   late List<AnimationController> animationControllers;
 
   final random = Random();
   List<SpielerPferderennen> spielerPferderennen = [];
 
+  bool loading = true;
   int n = 0;
   List<Cards> deck = [];
   List<Cards> deckVerdeckt = [];
@@ -42,14 +39,7 @@ class _PferderennenState extends State<Pferderennen>
   int position4 = 0;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
-
-  @override
   void dispose() {
-    widget.observer.unsubscribe(this);
     super.dispose();
   }
 
@@ -75,24 +65,11 @@ class _PferderennenState extends State<Pferderennen>
     }
 
     Future.delayed(const Duration(seconds: 1), () {
+      setState(() {
+        loading = false;
+      });
       _openSpielerDialog();
     });
-  }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/pferderennen',
-    );
   }
 
   List<Widget> generateVerdeckt() {
@@ -164,7 +141,7 @@ class _PferderennenState extends State<Pferderennen>
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (BuildContext context) =>
-            SpielerPferderennenModal(spieler: spielerPferderennen),
+            SpielerPferderennenModal(spieler: spielerPferderennen, loading: loading),
       ),
     );
   }
@@ -461,97 +438,109 @@ class _PferderennenState extends State<Pferderennen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        backgroundColor: colors.bluegray,
-        appBar: AppBar(
-            title: const Text("Pferderennen"),
-            centerTitle: true,
-            backgroundColor: colors.teal,
-            foregroundColor: Colors.black,
-            actions: [
-              IconButton(
-                  onPressed: _openSpielerDialog,
-                  icon: const Icon(Icons.settings)),
-              AnleitungenButton()
-              // You can add more icons here if needed
-            ]),
-        resizeToAvoidBottomInset: false,
-        body: Center(
-          child: Container(
-            padding: const EdgeInsets.only(top: 10.0),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Container(
-                    //height: MediaQuery.of(context).size.height,
-                    width: MediaQuery.of(context).size.width * 0.95,
-                    padding: const EdgeInsets.all(10.0),
-                    decoration: ShapeDecoration(
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25.0),
-                            side: const BorderSide(
-                                width: 10, color: colors.teal))),
-                    child: Center(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: generateVerdeckt()
-                          ),
-                          Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: generateHerzA()),
-                          Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: generateKreuzA()),
-                          Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: generateKaroA()),
-                          Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: generatePikA()),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
+    return Stack(
+      children: [
+        Scaffold(
+            backgroundColor: colors.bluegray,
+            appBar: AppBar(
+                title: const Text("Pferderennen"),
+                centerTitle: true,
+                backgroundColor: colors.teal,
+                foregroundColor: Colors.black,
+                actions: [
+                  IconButton(
+                      onPressed: _openSpielerDialog,
+                      icon: const Icon(Icons.settings)),
+                  AnleitungenButton()
+                  // You can add more icons here if needed
+                ]),
+            resizeToAvoidBottomInset: false,
+            body: Center(
+              child: Container(
+                padding: const EdgeInsets.only(top: 10.0),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        //height: MediaQuery.of(context).size.height,
+                        width: MediaQuery.of(context).size.width * 0.95,
+                        padding: const EdgeInsets.all(10.0),
+                        decoration: ShapeDecoration(
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25.0),
+                                side: const BorderSide(
+                                    width: 10, color: colors.teal))),
+                        child: Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 400),
-                                  transitionBuilder: (child, animation) {
-                                    return FadeTransition(
-                                        opacity: animation, child: child);
-                                  },
-                                  child: PferderennenCardVerdeckt(
-                                      width: 40,
-                                      childWidget: Image.asset(
-                                        'images/cards/${started ? deck[n].card : 'back2'}.png',
-                                      ),
-                                      key: ValueKey<int>(deck[n].id))),
-                              const SizedBox(
-                                height: 60,
-                                width: 40,
+                              Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: generateVerdeckt()),
+                              Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: generateHerzA()),
+                              Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: generateKreuzA()),
+                              Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: generateKaroA()),
+                              Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: generatePikA()),
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  AnimatedSwitcher(
+                                      duration:
+                                          const Duration(milliseconds: 400),
+                                      transitionBuilder: (child, animation) {
+                                        return FadeTransition(
+                                            opacity: animation, child: child);
+                                      },
+                                      child: PferderennenCardVerdeckt(
+                                          width: 40,
+                                          childWidget: Image.asset(
+                                            'images/cards/${started ? deck[n].card : 'back2'}.png',
+                                          ),
+                                          key: ValueKey<int>(deck[n].id))),
+                                  const SizedBox(
+                                    height: 60,
+                                    width: 40,
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 8.0),
+                    AnimatedButton(
+                      width: (MediaQuery.of(context).size.width * 0.95),
+                      color: colors.teal,
+                      onPressed: () {
+                        _naechsteKarte();
+                      },
+                      child: const Text(strings.naechsteKarte),
+                    ),
+                    const AdScreen()
+                  ],
                 ),
-                const SizedBox(height: 8.0),
-                AnimatedButton(
-                  width: (MediaQuery.of(context).size.width * 0.95),
-                  color: colors.teal,
-                  onPressed: () {
-                    _naechsteKarte();
-                  },
-                  child: const Text(strings.naechsteKarte),
-                ),
-                const AdScreen()
-              ],
+              ),
+            )),
+        if (loading)
+          Container(
+            color:
+                Colors.black.withOpacity(0.3), // Semi-transparent overlay color
+            child: const Center(
+              child: CircularProgressIndicator(), // Loading indicator
             ),
           ),
-        ));
+      ],
+    );
   }
 }

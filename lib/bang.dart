@@ -1,4 +1,3 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/anleitungen.dart';
@@ -9,15 +8,13 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Bang extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-  const Bang({Key? key, required this.observer}) : super(key: key);
+  const Bang({Key? key}) : super(key: key);
 
   @override
   State<Bang> createState() => _BangState();
 }
 
 class _BangState extends State<Bang> with RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   late Timer timer;
   late Timer delayedTimer;
 
@@ -28,17 +25,10 @@ class _BangState extends State<Bang> with RouteAware {
   int timeSpieler2 = 0;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
-
-  @override
   void dispose() {
     timer.cancel();
     delayedTimer.cancel();
     timerRunning = false;
-    widget.observer.unsubscribe(this);
     super.dispose();
   }
 
@@ -47,22 +37,6 @@ class _BangState extends State<Bang> with RouteAware {
     timer = Timer(const Duration(milliseconds: 1), () {});
     delayedTimer = Timer(const Duration(milliseconds: 1), () {});
     super.initState();
-  }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/bang',
-    );
   }
 
   void _startTimer() {
@@ -143,22 +117,20 @@ class _BangState extends State<Bang> with RouteAware {
                             height: MediaQuery.of(context).size.height * 0.1),
                         const Text('Spieler 1'),
                         const SizedBox(height: 8.0),
-                        Opacity(
-                          opacity: buttonVisible ? 1.0 : 0.5,
-                          child: AnimatedButton(
-                            width: (MediaQuery.of(context).size.width * 0.6),
-                            color: colors.teal,
-                            onPressed: () {
-                              _resetState();
-                              Navigator.pop(context);
-                            },
-                            child: const Text(
-                              strings.nochmal,
-                              style: TextStyle(
-                                fontSize: 22,
-                                color: Colors.black,
-                                fontWeight: FontWeight.w500,
-                              ),
+                        AnimatedButton(
+                          enabled: buttonVisible,
+                          width: (MediaQuery.of(context).size.width * 0.6),
+                          color: colors.teal,
+                          onPressed: () {
+                            _resetState();
+                            Navigator.pop(context);
+                          },
+                          child: const Text(
+                            strings.nochmal,
+                            style: TextStyle(
+                              fontSize: 22,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
@@ -182,22 +154,20 @@ class _BangState extends State<Bang> with RouteAware {
                           height: MediaQuery.of(context).size.height * 0.1),
                       const Text('Spieler 2'),
                       const SizedBox(height: 8.0),
-                      Opacity(
-                        opacity: buttonVisible ? 1.0 : 0.5,
-                        child: AnimatedButton(
-                          width: (MediaQuery.of(context).size.width * 0.6),
-                          color: colors.teal,
-                          onPressed: () {
-                            _resetState();
-                            Navigator.pop(context);
-                          },
-                          child: const Text(
-                            strings.nochmal,
-                            style: TextStyle(
-                              fontSize: 22,
-                              color: Colors.black,
-                              fontWeight: FontWeight.w500,
-                            ),
+                      AnimatedButton(
+                        enabled: buttonVisible,
+                        width: (MediaQuery.of(context).size.width * 0.6),
+                        color: colors.teal,
+                        onPressed: () {
+                          _resetState();
+                          Navigator.pop(context);
+                        },
+                        child: const Text(
+                          strings.nochmal,
+                          style: TextStyle(
+                            fontSize: 22,
+                            color: Colors.black,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),

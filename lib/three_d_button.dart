@@ -65,7 +65,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
                 decoration: BoxDecoration(
                     color: widget.enabled
                         ? darken(widget.color, widget.shadowDegree)
-                        : darken(widget.color.withOpacity(0.5), widget.shadowDegree),
+                        : darken(Colors.blueGrey.withOpacity(0.5), widget.shadowDegree),
                     borderRadius: widget.shape != BoxShape.circle
                         ? const BorderRadius.all(
                       Radius.circular(25),
@@ -82,7 +82,7 @@ class _AnimatedButtonState extends State<AnimatedButton> {
                 height: buttonheight,
                 width: widget.width,
                 decoration: BoxDecoration(
-                    color: widget.enabled ? widget.color : widget.color.withOpacity(0.5),
+                    color: widget.enabled ? widget.color : Colors.blueGrey.withOpacity(0.5),
                     borderRadius: widget.shape != BoxShape.circle
                         ? const BorderRadius.all(
                       Radius.circular(25),

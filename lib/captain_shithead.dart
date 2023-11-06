@@ -1,4 +1,4 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+
 import 'package:flutter/material.dart';
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/anleitungen.dart';
@@ -9,16 +9,14 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class CaptainShithead extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-
-  const CaptainShithead({Key? key, required this.observer,}) : super(key: key);
+  const CaptainShithead({super.key});
 
   @override
   State<CaptainShithead> createState() => _CaptainShitheadState();
 }
 
 class _CaptainShitheadState extends State<CaptainShithead> with RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
+  
   int n = 0;
   List<Cards> deck = [];
 
@@ -27,15 +25,11 @@ class _CaptainShitheadState extends State<CaptainShithead> with RouteAware {
   bool? correct;
   int correctInRow = 0;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
+  
 
   @override
   void dispose() {
-    widget.observer.unsubscribe(this);
+    
     super.dispose();
   }
 
@@ -44,22 +38,6 @@ class _CaptainShitheadState extends State<CaptainShithead> with RouteAware {
     super.initState();
     deck = createDeck();
     deck.shuffle();
-  }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/captain_shithead',
-    );
   }
 
   void _naechsteKarte() {
@@ -75,10 +53,8 @@ class _CaptainShitheadState extends State<CaptainShithead> with RouteAware {
       } else {
         started = true;
         text = _setText();
-        
       }
     });
-    _logCustomEvent();
   }
 
   bool between(int start, int value, int end) {
@@ -105,18 +81,8 @@ class _CaptainShitheadState extends State<CaptainShithead> with RouteAware {
     return "";
   }
 
-  void _logCustomEvent() {
-    analytics.logEvent(
-      name: 'custom_event_name',
-      parameters: {
-        'parameter_name': 'parameter_value',
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-
     double screenWidth = MediaQuery.of(context).size.width;
     double varFontSize;
 

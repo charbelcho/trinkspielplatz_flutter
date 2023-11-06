@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/anleitungen.dart';
@@ -11,9 +9,7 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Maexchen extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-
-  const Maexchen({Key? key, required this.observer,}): super(key:key);
+  const Maexchen({Key? key}): super(key:key);
 
   @override
   State<Maexchen> createState() => _MaexchenState();
@@ -21,7 +17,6 @@ class Maexchen extends StatefulWidget {
 
 class _MaexchenState extends State<Maexchen>
     with SingleTickerProviderStateMixin, RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   late AnimationController _controller;
   late Animation<double> _animation;
   late Timer timer;
@@ -35,15 +30,9 @@ class _MaexchenState extends State<Maexchen>
   bool choosed = false;
   bool tipVisible = true;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
 
   @override
   void dispose() {
-    widget.observer.unsubscribe(this);
     super.dispose();
   }
 
@@ -62,24 +51,6 @@ class _MaexchenState extends State<Maexchen>
       end: 1,
     ).chain(CurveTween(curve: Curves.linear)).animate(_controller);
   }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/maexchen',
-    );
-  }
-
-
 
   void _wuerfeln() {
     if (!rolling && !gewuerfelt) {

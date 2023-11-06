@@ -1,4 +1,4 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -12,28 +12,19 @@ import 'assets/strings.dart' as strings;
 import 'model/data_class.dart';
 
 class Eher extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-  const Eher({Key? key, required this.observer}) : super(key: key);
+  const Eher({super.key});
 
   @override
   State<Eher> createState() => _EherState();
 }
 
 class _EherState extends State<Eher> with RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   int n = 0;
   List<EherData> eherList = [];
   bool loadingEher = true;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
-
-  @override
   void dispose() {
-    widget.observer.unsubscribe(this);
     super.dispose();
   }
 
@@ -42,22 +33,6 @@ class _EherState extends State<Eher> with RouteAware {
     super.initState();
 
     fetchData();
-  }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/eher',
-    );
   }
 
   Future<void> fetchData() async {

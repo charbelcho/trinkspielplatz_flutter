@@ -1,6 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:firebase_analytics/firebase_analytics.dart';
+
 import 'package:flutter/material.dart';
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/anleitungen.dart';
@@ -16,16 +17,13 @@ import 'assets/strings.dart' as strings;
 import 'model/data_class.dart';
 
 class WerBinIch extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-
-  const WerBinIch({Key? key, required this.observer}) : super(key: key);
+    const WerBinIch({super.key});
 
   @override
   State<WerBinIch> createState() => _WerBinIchState();
 }
 
 class _WerBinIchState extends State<WerBinIch> with RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   bool loading = true;
   String name = '';
   String nameEingabe = '';
@@ -34,7 +32,7 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
   int namenSpeichernFuerIndex = 0;
   String namenSpeichernFuer = '';
 
-  bool connected = false;
+  bool connectionFailed = false;
   late io.Socket socket;
 
   void connectToServer() {
@@ -44,24 +42,46 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
           io.io("wss://socket-ios-backend.herokuapp.com", <String, dynamic>{
         "transports": ["websocket"],
       });
+      /* socket = io.io("ws://localhost:8000", <String, dynamic>{
+        "transports": ["websocket"],
+        "forceNew": true
+      }); */
     } else if (Platform.isAndroid) {
       // Android-Verbindung zu Socket-Servers.
-      socket = io.io("ws://10.0.2.2:8000", <String, dynamic>{
+      socket =
+          io.io("wss://socket-ios-backend.herokuapp.com", <String, dynamic>{
         "transports": ["websocket"],
+        "forceNew": true
       });
     } else {
-      socket = io.io("ws://localhost:8000", <String, dynamic>{
+      socket =
+          io.io("wss://socket-ios-backend.herokuapp.com", <String, dynamic>{
         "transports": ["websocket"],
+        "forceNew": true
       });
     }
 
     socket.onConnect((_) {
       setState(() {
-        connected = true;
         loading = false;
+        connectionFailed = false;
       });
       _showDialogName(context);
       logger.i('Verbunden');
+    });
+
+    socket.onConnectError((_) {
+      setState(() {
+        loading = false;
+        connectionFailed = true;
+      });
+    });
+
+    socket.onError((_) {
+      setState(() {
+        loading = false;
+        connectionFailed = true;
+      });
     });
 
     socket.onDisconnect((_) {
@@ -126,20 +146,12 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
-
-  @override
   void dispose() {
-    widget.observer.unsubscribe(this);
     // Schließe die Socket-Verbindung, wenn die App geschlossen oder die Seite gewechselt wird.
     socket.disconnect();
-    setState(() {
-      connected = false;
-      loading = false;
-    });
+    socket.dispose();
+    socket.destroy();
+
     super.dispose();
   }
 
@@ -149,22 +161,6 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
     Future.delayed(const Duration(seconds: 1), () {
       connectToServer();
     });
-  }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/wer_bin_ich',
-    );
   }
 
   void _showDialogSpielVerlassen(BuildContext context) {
@@ -186,8 +182,19 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
               onPressed: () {
                 socket.disconnect();
                 setState(() {
-                  connected = false;
+                  loading = false;
+
+                  name = '';
+                  nameEingabe = '';
+                  raumIdEingabe = '';
+                  roomWerBinIch = RoomWerBinIch(roomId: '', spieler: []);
+                  namenSpeichernFuerIndex = 0;
+                  namenSpeichernFuer = '';
+
+                  connectionFailed = false;
                 });
+                /* Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/', (Route<dynamic> route) => false); */
                 Navigator.of(context).popUntil(ModalRoute.withName('/'));
               },
               child: const Text(
@@ -417,6 +424,7 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
                   onPressed: () {
                     // Define the behavior when the custom back button is pressed
                     _showDialogSpielVerlassen(context);
+                    /* Navigator.of(context).pop(); */
                   },
                 ),
                 centerTitle: true,
@@ -446,6 +454,7 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
                                   socket.emit("createRoom", name);
                                 }
                               },
+                              enabled: name.isNotEmpty && roomWerBinIch.roomId.isEmpty,
                               child: const Text(strings.rErstellen)),
                           AnimatedButton(
                               width: (MediaQuery.of(context).size.width * 0.28),
@@ -455,6 +464,7 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
                                   _showDialogRaumBeitreten(context);
                                 }
                               },
+                              enabled: name.isNotEmpty && roomWerBinIch.roomId.isEmpty,
                               child: const Text(strings.rBeitreten)),
                           AnimatedButton(
                               width: (MediaQuery.of(context).size.width * 0.28),
@@ -462,6 +472,7 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
                               onPressed: () {
                                 _showDialogRaumVerlassen(context);
                               },
+                              enabled: name.isNotEmpty && roomWerBinIch.roomId.isNotEmpty,
                               child: const Text(
                                 strings.rVerlassen,
                                 style: TextStyle(color: Colors.white),
@@ -626,6 +637,68 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
                 Colors.black.withOpacity(0.3), // Semi-transparent overlay color
             child: const Center(
               child: CircularProgressIndicator(), // Loading indicator
+            ),
+          ),
+        if (connectionFailed)
+          Container(
+            color:
+                Colors.black.withOpacity(0.3), // Semi-transparent overlay color
+            child: Center(
+              child: Stack(
+                children: [
+                  DefaultTextStyle(
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 16, decoration: null),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                            'Verbindung fehlgeschlagen.\nErneuter Versuch?'),
+                        const SizedBox(height: 16.0),
+                        FloatingActionButton(
+                          onPressed: () {
+                            setState(() {
+                              loading = true;
+                              connectionFailed = false;
+                            });
+                            Future.delayed(const Duration(seconds: 3), () {
+                              connectToServer();
+                            });
+                          },
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.transparent,
+                          elevation: 0,
+                          child: const Icon(
+                            Icons.autorenew,
+                            size: 45,
+                          ),
+                        ),
+                        const SizedBox(height: 16.0),
+                        const Text('Oder zurück zum Start'),
+                        const SizedBox(height: 16.0),
+                        AnimatedButton(
+                            color: colors.teal,
+                            onPressed: () {
+                              setState(() {
+                                loading = false;
+                                name = '';
+                                nameEingabe = '';
+                                raumIdEingabe = '';
+                                roomWerBinIch =
+                                    RoomWerBinIch(roomId: '', spieler: []);
+                                namenSpeichernFuerIndex = 0;
+                                namenSpeichernFuer = '';
+                                connectionFailed = false;
+                              });
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text('Zurück',
+                                style: TextStyle(color: Colors.black))),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
       ],

@@ -1,3 +1,4 @@
 {
-  "cmake.configureOnOpen": true
+  "cmake.configureOnOpen": true,
+  "cmake.sourceDirectory": "/Users/charbelchougourou/trinkspielplatz_flutter/windows/runner"
 }

@@ -1,4 +1,4 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -12,30 +12,19 @@ import 'assets/strings.dart' as strings;
 import 'model/data_class.dart';
 
 class NochNie extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-
-  const NochNie({super.key, required this.observer});
+  const NochNie({super.key});
 
   @override
   State<NochNie> createState() => _NochNieState();
 }
 
 class _NochNieState extends State<NochNie> with RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
-
   int n = 0;
   List<NochNieData> nochnieList = [];
   bool loadingNochnie = true;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
-
-  @override
   void dispose() {
-    widget.observer.unsubscribe(this);
     super.dispose();
   }
 
@@ -44,36 +33,6 @@ class _NochNieState extends State<NochNie> with RouteAware {
     super.initState();
 
     fetchData();
-  }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/noch_nie',
-    );
-  }
-
-  Future<void> simulateAsyncFunction() async {
-    // Simulate an asynchronous operation with a micro-task delay
-    await Future.delayed(Duration(seconds: 10));
-
-    // Your "async" code here
-    if (mounted) {
-      setState(() {
-        n = 100;
-      });
-    }
-
-    print('Async operation completed');
   }
 
   Future<void> fetchData() async {

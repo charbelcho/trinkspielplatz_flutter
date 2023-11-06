@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/notify.dart';
@@ -13,8 +11,7 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Einhundert extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-  const Einhundert({Key? key, required this.observer}) : super(key:key);
+  const Einhundert({Key? key}) : super(key: key);
 
   @override
   State<Einhundert> createState() => _EinhundertState();
@@ -22,11 +19,12 @@ class Einhundert extends StatefulWidget {
 
 class _EinhundertState extends State<Einhundert>
     with SingleTickerProviderStateMixin, RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   late AnimationController _controller;
   late Animation<double> _animation;
   late Timer timer;
   final random = Random();
+
+  bool loading = true;
   int value1 = 1;
   int n = 0;
   List<Spieler100> spielerEinhundert = [];
@@ -39,18 +37,6 @@ class _EinhundertState extends State<Einhundert>
   bool naechsterSpieler = false;
   bool rolling = false;
   bool textVisible = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
-
-  @override
-  void dispose() {
-    widget.observer.unsubscribe(this);
-    super.dispose();
-  }
 
   @override
   void initState() {
@@ -68,33 +54,20 @@ class _EinhundertState extends State<Einhundert>
     ).chain(CurveTween(curve: Curves.linear)).animate(_controller);
 
     Future.delayed(const Duration(seconds: 1), () {
+      setState(() {
+        loading = false;
+      });
       _openSpielerDialog();
     });
   }
 
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/einhundert',
-    );
-  }
-
   void _openSpielerDialog() {
     Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (BuildContext context) => SpielerEinhundertModal(
-              spieler: spielerEinhundert, setName: _setName),
-        ),
-      );
+      MaterialPageRoute(
+        builder: (BuildContext context) => SpielerEinhundertModal(
+            spieler: spielerEinhundert, setName: _setName, loading: loading),
+      ),
+    );
   }
 
   bool _checkEmptySpielerAndPunkte() {
@@ -205,7 +178,7 @@ class _EinhundertState extends State<Einhundert>
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (BuildContext context) => SpielerEinhundertModal(
-                spieler: spielerEinhundert, setName: _setName),
+                spieler: spielerEinhundert, setName: _setName, loading: loading),
           ),
         );
       });
@@ -256,119 +229,135 @@ class _EinhundertState extends State<Einhundert>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        backgroundColor: colors.bluegray,
-        appBar: AppBar(
-            title: const Text("100"),
-            centerTitle: true,
-            backgroundColor: colors.teal,
-            foregroundColor: Colors.black,
-            actions: [
-              IconButton(onPressed: _openSpielerDialog, icon: Icon(Icons.settings)),
-              AnleitungenButton()
-              // You can add more icons here if needed
-            ]),
-        resizeToAvoidBottomInset: false,
-        body: Center(
-          child: Container(
-            padding: const EdgeInsets.only(top: 10.0),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Container(
-                    //height: 500,
-                    width: MediaQuery.of(context).size.width * 0.95,
-                    decoration: ShapeDecoration(
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25.0),
-                            side: const BorderSide(
-                                width: 10, color: colors.teal))),
-                    child: Center(
-                        child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Column(children: [
-                                  const Text(
-                                    'Am Zug:',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold),
+    return Stack(
+      children: [
+        Scaffold(
+            backgroundColor: colors.bluegray,
+            appBar: AppBar(
+                title: const Text("100"),
+                centerTitle: true,
+                backgroundColor: colors.teal,
+                foregroundColor: Colors.black,
+                actions: [
+                  IconButton(
+                      onPressed: _openSpielerDialog,
+                      icon: Icon(Icons.settings)),
+                  AnleitungenButton()
+                  // You can add more icons here if needed
+                ]),
+            resizeToAvoidBottomInset: false,
+            body: Center(
+              child: Container(
+                padding: const EdgeInsets.only(top: 10.0),
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        //height: 500,
+                        width: MediaQuery.of(context).size.width * 0.95,
+                        decoration: ShapeDecoration(
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25.0),
+                                side: const BorderSide(
+                                    width: 10, color: colors.teal))),
+                        child: Center(
+                            child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(10.0),
+                              child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Column(children: [
+                                      const Text(
+                                        'Am Zug:',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(spielerEinhundert.isNotEmpty
+                                          ? spielerEinhundert[n].name
+                                          : '')
+                                    ]),
+                                    Column(children: [
+                                      const Text(
+                                        'Punkte:',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(spielerEinhundert.isNotEmpty
+                                          ? '${spielerEinhundert[n].punkte}'
+                                          : '0'),
+                                      const Text('aktuell:'),
+                                      Text('$punkteEnde'),
+                                    ]),
+                                  ]),
+                            ),
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  AnimatedBuilder(
+                                    animation: _animation,
+                                    builder: (context, child) {
+                                      return Transform.rotate(
+                                        angle: _animation.value *
+                                            2 *
+                                            3.14159265359, // 2 * Pi
+                                        child: InkWell(
+                                            onTap: _wuerfeln,
+                                            child: Image.asset(
+                                                'images/wuerfel/wuerfel-$value1-black.png',
+                                                height: 200.0,
+                                                width: 200.0)),
+                                      );
+                                    },
                                   ),
-                                  Text(spielerEinhundert.isNotEmpty
-                                      ? spielerEinhundert[n].name
-                                      : '')
-                                ]),
-                                Column(children: [
-                                  const Text(
-                                    'Punkte:',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  Text(spielerEinhundert.isNotEmpty
-                                      ? '${spielerEinhundert[n].punkte}'
-                                      : '0'),
-                                  const Text('aktuell:'),
-                                  Text('$punkteEnde'),
-                                ]),
-                              ]),
-                        ),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              AnimatedBuilder(
-                                animation: _animation,
-                                builder: (context, child) {
-                                  return Transform.rotate(
-                                    angle: _animation.value *
-                                        2 *
-                                        3.14159265359, // 2 * Pi
-                                    child: InkWell(
-                                        onTap: _wuerfeln,
-                                        child: Image.asset(
-                                            'images/wuerfel/wuerfel-$value1-black.png',
-                                            height: 200.0,
-                                            width: 200.0)),
-                                  );
-                                },
+                                  SizedBox(
+                                    height: 40,
+                                    width: 200,
+                                    child: Text(textVisible ? text : ''),
+                                  )
+                                ],
                               ),
-                              SizedBox(
-                                height: 40,
-                                width: 200,
-                                child: Text(textVisible ? text : ''),
-                              )
-                            ],
-                          ),
-                        ),
-                      ],
-                    )),
-                  ),
+                            ),
+                          ],
+                        )),
+                      ),
+                    ),
+                    const SizedBox(height: 8.0),
+                    AnimatedButton(
+                      enabled: (!rolling && _checkEmptySpielerAndPunkte()) ||
+                          naechsterSpieler,
+                      width: (MediaQuery.of(context).size.width * 0.95),
+                      color: colors.teal,
+                      onPressed: () {
+                        _speichern();
+                      },
+                      child: Text(
+                        !naechsterSpieler
+                            ? strings.speichern
+                            : strings.naechsterSpieler,
+                      ),
+                    ),
+                    const AdScreen()
+                  ],
                 ),
-                const SizedBox(height: 8.0),
-                AnimatedButton(
-                  enabled: (!rolling && _checkEmptySpielerAndPunkte()) ||
-                      naechsterSpieler,
-                  width: (MediaQuery.of(context).size.width * 0.95),
-                  color: colors.teal,
-                  onPressed: () {
-                    _speichern();
-                  },
-                  child: Text(
-                    !naechsterSpieler
-                        ? strings.speichern
-                        : strings.naechsterSpieler,
-                  ),
-                ),
-                const AdScreen()
-              ],
+              ),
+            )),
+        if (loading)
+          Container(
+            color:
+                Colors.black.withOpacity(0.3), // Semi-transparent overlay color
+            child: const Center(
+              child: CircularProgressIndicator(), // Loading indicator
             ),
           ),
-        ));
+      ],
+    );
   }
 }

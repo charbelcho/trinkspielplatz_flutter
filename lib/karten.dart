@@ -8,25 +8,17 @@ import 'package:trinkspielplatz/deck_utils.dart';
 import 'package:trinkspielplatz/model/cards_class.dart';
 import 'package:trinkspielplatz/notify.dart';
 import 'package:trinkspielplatz/three_d_button.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Karten extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-
-  const Karten({
-    Key? key,
-    required this.observer,
-  }) : super(key: key);
+  const Karten({ super.key });
 
   @override
   State<Karten> createState() => _KartenState();
 }
 
 class _KartenState extends State<Karten> with RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
-
   var notification = Notify();
   int n = 0;
   List<Cards> deck = [];
@@ -45,15 +37,11 @@ class _KartenState extends State<Karten> with RouteAware {
   List<String> pendingOptionsZeichen = ['Herz', 'Kreuz', 'Karo', 'Pik'];
   List<String> pendingOptionsZahl = ['2-6', '7-10', 'Bube-Ass'];
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
+  
 
   @override
   void dispose() {
-    widget.observer.unsubscribe(this);
+    
     super.dispose();
   }
 
@@ -294,21 +282,5 @@ class _KartenState extends State<Karten> with RouteAware {
             ),
           ),
         ));
-  }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/karten',
-    );
   }
 }

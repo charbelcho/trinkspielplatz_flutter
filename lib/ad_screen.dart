@@ -17,12 +17,12 @@ class _AdScreenState extends State<AdScreen> {
   // TODO: replace this test ad unit with your own ad unit.
   final adUnitId = Platform.isAndroid
       ? 'ca-app-pub-5545282755961898/8024751131'
-      : 'ca-app-pub-3940256099942544/2934735716';
+      : 'ca-app-pub-5545282755961898/4498060356';
 
   @override
   void initState() {
     super.initState();
-    loadAd();
+    //loadAd();
   }
 
   @override

@@ -1,4 +1,4 @@
-import 'package:firebase_analytics/firebase_analytics.dart';
+
 import 'package:flutter/material.dart';
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/anleitungen.dart';
@@ -10,15 +10,13 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class KingsCup extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-  const KingsCup({Key? key, required this.observer}) : super(key: key);
+  const KingsCup({super.key, });
 
   @override
   State<KingsCup> createState() => _KingsCupState();
 }
 
 class _KingsCupState extends State<KingsCup> with RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   int n = 0;
   List<Cards> deck = [];
 
@@ -26,12 +24,6 @@ class _KingsCupState extends State<KingsCup> with RouteAware {
 
   String text = '';
   bool started = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
 
   @override
   void dispose() {
@@ -46,22 +38,6 @@ class _KingsCupState extends State<KingsCup> with RouteAware {
     Future.delayed(const Duration(milliseconds: 500), () {
       _showStartDialog(context);
     });
-  }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/kings_cup',
-    );
   }
 
   void _showStartDialog(BuildContext context) {

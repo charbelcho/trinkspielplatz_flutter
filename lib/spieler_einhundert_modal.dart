@@ -7,9 +7,10 @@ import 'assets/colors.dart' as colors;
 class SpielerEinhundertModal extends StatefulWidget {
   final List<Spieler100> spieler;
   final Function() setName;
+  bool? loading;
 
-  const SpielerEinhundertModal(
-      {super.key, required this.spieler, required this.setName});
+  SpielerEinhundertModal(
+      {super.key, required this.spieler, required this.setName, required this.loading});
 
   @override
   State<SpielerEinhundertModal> createState() => _SpielerEinhundertModalState();
@@ -22,6 +23,9 @@ class _SpielerEinhundertModalState extends State<SpielerEinhundertModal> {
   @override
   void initState() {
     super.initState();
+    setState(() {
+      widget.loading = false;
+    });
   }
 
   @override

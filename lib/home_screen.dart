@@ -15,20 +15,15 @@ import 'package:trinkspielplatz/three_d_button.dart';
 import 'package:trinkspielplatz/wahrheit_pflicht.dart';
 import 'package:trinkspielplatz/wer_bin_ich.dart';
 import 'package:trinkspielplatz/wuerfel.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
+
 import 'assets/colors.dart' as colors;
 
 class HomeScreen extends StatefulWidget {
   final String title;
-  final FirebaseAnalytics analytics;
-  final FirebaseAnalyticsObserver observer;
 
-  HomeScreen({
-    Key? key,
-    required this.title,
-    required this.analytics,
-    required this.observer,
-  }) : super(key: key);
+  const HomeScreen({
+    super.key,
+    required this.title});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -45,30 +40,28 @@ class _HomeScreenState extends State<HomeScreen> {
     'Würfel': const Wuerfel(), */
   };
 
-  Map<String, StatefulWidget> create(FirebaseAnalyticsObserver observer) {
+  Map<String, StatefulWidget> create() {
     Map<String, StatefulWidget> spiele1 = {
-      'Ich hab noch nie': NochNie(observer: widget.observer,),
-      'Wer würde eher?': Eher(observer: widget.observer,),
-      'BANG!': Bang(observer: widget.observer,),
-      'Pferderennen': Pferderennen(observer: widget.observer,),
-      'Wer bin ich?': WerBinIch(observer: widget.observer,),
-      'Mäxchen': Maexchen(observer: widget.observer,),
-      'Würfel': Wuerfel(observer: widget.observer,),
+      'Ich hab noch nie': NochNie(),
+      'Wer würde eher?': Eher(),
+      'BANG!': Bang(),
+      'Pferderennen': Pferderennen(),
+      'Wer bin ich?': WerBinIch(),
+      'Mäxchen': Maexchen(),
+      'Würfel': Wuerfel(),
     };
     return spiele1;
   }
 
-  Map<String, StatefulWidget> create2(FirebaseAnalyticsObserver observer) {
+  Map<String, StatefulWidget> create2() {
     Map<String, StatefulWidget> spiele2 = {
-      'Wahrheit oder Pflicht?': WahrheitPflicht(observer: widget.observer,),
-      'Höher oder Tiefer?': HoeherTiefer(observer: widget.observer,),
-      'Captain Shithead': CaptainShithead(observer: widget.observer,),
-      'King\'s Cup': KingsCup(observer: widget.observer,),
-      'Busfahrer': Busfahrer(observer: widget.observer, analytics: widget.analytics,),
-      '100': Einhundert(observer: widget.observer,),
-      'Karten': Karten(
-        observer: observer,
-      )
+      'Wahrheit oder Pflicht?': WahrheitPflicht(),
+      'Höher oder Tiefer?': HoeherTiefer(),
+      'Captain Shithead': CaptainShithead(),
+      'King\'s Cup': KingsCup(),
+      'Busfahrer': Busfahrer(),
+      '100': Einhundert(),
+      'Karten': Karten()
     };
     return spiele2;
   }
@@ -89,11 +82,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-  }
-
-  Future<void> _testResetAnalyticsData() async {
-    await widget.analytics.resetAnalyticsData();
-    print('resetAnalyticsData succeeded');
   }
 
   List<Widget> spieleListe(
@@ -117,14 +105,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return widgetList;
   }
 
-  Future<void> goToPage(String screenName, String screenClass) async {
-    await FirebaseAnalytics.instance
-        .logEvent(name: 'Zu $screenName wechseln', parameters: {
-      'firebase_screen': screenName,
-      'firebase_screen_class': screenClass,
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -144,10 +124,10 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    Column(children: spieleListe(context, create(widget.observer))),
+                    Column(children: spieleListe(context, create())),
                     Column(
                         children:
-                            spieleListe(context, create2(widget.observer))),
+                            spieleListe(context, create2())),
                   ])),
         ));
   }

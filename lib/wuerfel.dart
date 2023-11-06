@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:firebase_analytics/firebase_analytics.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:trinkspielplatz/ad_screen.dart';
@@ -12,8 +12,8 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Wuerfel extends StatefulWidget {
-  final FirebaseAnalyticsObserver observer;
-  const Wuerfel({Key? key, required this.observer}) : super(key: key);
+  
+  const Wuerfel({Key? key, }) : super(key: key);
 
   @override
   State<Wuerfel> createState() => _WuerfelState();
@@ -21,7 +21,6 @@ class Wuerfel extends StatefulWidget {
 
 class _WuerfelState extends State<Wuerfel>
     with TickerProviderStateMixin, RouteAware {
-  final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   int n = 0;
   late List<AnimationController> controllerList;
   late List<Animation<double>> animationList;
@@ -62,14 +61,7 @@ class _WuerfelState extends State<Wuerfel>
   bool rolling = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    widget.observer.subscribe(this, ModalRoute.of(context)! as PageRoute);
-  }
-
-  @override
-  void dispose() {
-    widget.observer.unsubscribe(this);
+  void dispose() {  
     super.dispose();
   }
 
@@ -94,22 +86,6 @@ class _WuerfelState extends State<Wuerfel>
             )
                 .chain(CurveTween(curve: Curves.linear))
                 .animate(controllerList[index]));
-  }
-
-  @override
-  void didPush() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  @override
-  void didPopNext() {
-    _sendCurrentTabToAnalytics();
-  }
-
-  void _sendCurrentTabToAnalytics() {
-    analytics.setCurrentScreen(
-      screenName: '/wuerfel',
-    );
   }
 
   void _wuerfeln() {
