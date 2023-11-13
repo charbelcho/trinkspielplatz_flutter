@@ -19,3 +19,6 @@ const stimmt = 'Stimmt';
 const stimmtNicht = 'Stimmt nicht';
 const speichern = 'Speichern';
 const alleAuswaehlenEntfernen = 'Alle auswählen/entfernen';
+const verbindungFehlgeschlagen = 'Verbindung fehlgeschlagen.\nErneuter Versuch?';
+const zurueckZuStart = 'Oder zurück zum Start';
+const zurueck = 'Zurück';

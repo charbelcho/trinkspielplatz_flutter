@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/anleitungen.dart';
+import 'package:trinkspielplatz/connection_error_widget.dart';
 import 'package:trinkspielplatz/deck_utils.dart';
 import 'package:trinkspielplatz/flip_card.dart';
 import 'package:trinkspielplatz/logger.dart';
@@ -16,8 +17,7 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Busfahrer extends StatefulWidget {
-  const Busfahrer({Key? key})
-      : super(key: key);
+  const Busfahrer({super.key});
 
   @override
   State<Busfahrer> createState() => _BusfahrerState();
@@ -75,14 +75,14 @@ class _BusfahrerState extends State<Busfahrer>
       // socket = io.io("ws://localhost:8001"
       // "wss://socket-ios-backend-busfahrer.herokuapp.com"
       socket = io.io(
-          "wss://socket-ios-backend-busfahrer.herokuapp.com", <String, dynamic>{
+        "wss://socket-ios-backend-busfahrer.herokuapp.com", <String, dynamic>{
         "transports": ["websocket"],
         "forceNew": true
       });
     } else if (Platform.isAndroid) {
       // Android-Verbindung zu Socket-Servers.
       socket = io.io(
-          "wss://socket-ios-backend-busfahrer.herokuapp.com", <String, dynamic>{
+        "wss://socket-ios-backend-busfahrer.herokuapp.com", <String, dynamic>{
         "transports": ["websocket"],
         "forceNew": true
       });
@@ -335,11 +335,6 @@ class _BusfahrerState extends State<Busfahrer>
       builder: (BuildContext context) {
         return WillPopScope(
           onWillPop: () async {
-            // Check for input and prevent dismissal if no input is given
-            /* if (nameEingabe.isEmpty) {
-              return false;
-            }
-            socket.emit("usernameBusfahrer", nameEingabe); */
             setState(() {
               nameEingabe = '';
             });
@@ -404,8 +399,6 @@ class _BusfahrerState extends State<Busfahrer>
                 if (raumIdEingabe.isNotEmpty) {
                   socket.emit("joinRoomBusfahrer",
                       {'roomId': raumIdEingabe, 'name': name});
-                  // Handle action on button press
-                  //Navigator.pop(context);
                 }
               },
               child: const Text('Beitreten'),
@@ -863,7 +856,8 @@ class _BusfahrerState extends State<Busfahrer>
                                   ]),
                               Expanded(
                                 child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(name),
                                       const SizedBox(height: 5.0),
@@ -916,7 +910,8 @@ class _BusfahrerState extends State<Busfahrer>
                             Visibility(
                               visible: roomBusfahrer.phase == 2,
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Column(
                                     children: createMeineKarten(),
@@ -942,134 +937,150 @@ class _BusfahrerState extends State<Busfahrer>
                                     children: [
                                       Expanded(
                                         child: Center(
-                                          child: roomBusfahrer.phase == 3 &&
-                                      correctInRow < 5 ? Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceAround,
-                                            children: [
-                                              Text("Busfahrer: $busfahrer",
-                                                  style: TextStyle(
-                                                      fontSize: varFontSize)),
-                                              AnimatedSwitcher(
-                                                  duration: const Duration(
-                                                      milliseconds: 400),
-                                                  transitionBuilder:
-                                                      (child, animation) {
-                                                    return FadeTransition(
-                                                      opacity: animation,
-                                                      child: child,
-                                                    );
-                                                  },
-                                                  child: Container(
-                                                    key: ValueKey<int>(
-                                                        deck.isNotEmpty
-                                                            ? deck[n].id
-                                                            : 0),
-                                                    height: MediaQuery.of(context)
-                                                            .size
-                                                            .height *
-                                                        0.23,
-                                                    decoration: BoxDecoration(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              10),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black
-                                                              .withOpacity(
-                                                                  0.4), // Shadow color and opacity
-                                                          spreadRadius:
-                                                              2, // How far the shadow spreads
-                                                          blurRadius:
-                                                              5, // The blur radius of the shadow
-                                                          offset: const Offset(0,
-                                                              3), // Offset of the shadow (x, y)
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: Image.asset(
-                                                        'images/cards/${deck.isNotEmpty ? deck[n].card : 'herz2'}.png')
-                                                  )),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 20.0),
-                                                child: Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      AnimatedSwitcher(
-                                                        duration: const Duration(
-                                                            milliseconds: 400),
-                                                        transitionBuilder:
-                                                            (child, animation) {
-                                                          return FadeTransition(
-                                                              opacity: animation,
-                                                              child: child);
-                                                        },
-                                                        child: Opacity(
-                                                            key:
-                                                                ValueKey(correct),
-                                                            opacity:
-                                                                correct != null
-                                                                    ? 1.0
-                                                                    : 0.0,
-                                                            child: Container(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .all(10.0),
-                                                              decoration:
-                                                                  ShapeDecoration(
-                                                                      color: correct ==
-                                                                              true
-                                                                          ? correct ==
-                                                                                  false
-                                                                              ? Colors
-                                                                                  .transparent
-                                                                              : colors
-                                                                                  .green
-                                                                          : colors
-                                                                              .red,
-                                                                      shape: RoundedRectangleBorder(
-                                                                          borderRadius:
-                                                                              BorderRadius.circular(25.0))),
-                                                              child: Text(
-                                                                  correct == true
-                                                                      ? correct ==
-                                                                              false
-                                                                          ? ''
-                                                                          : 'Richtig'
-                                                                      : 'Falsch',
-                                                                  style: TextStyle(
-                                                                      fontSize:
-                                                                          varFontSize)),
-                                                            )),
-                                                      ),
-                                                      AnimatedSwitcher(
-                                                        duration: const Duration(
-                                                            milliseconds: 400),
-                                                        transitionBuilder:
-                                                            (child, animation) {
-                                                          return FadeTransition(
-                                                              opacity: animation,
-                                                              child: child);
-                                                        },
-                                                        child: Text(
-                                                            "Richtig in Folge: $correctInRow",
-                                                            // This key causes the AnimatedSwitcher to interpret this as a "new"
-                                                            // child each time the count changes, so that it will begin its animation
-                                                            // when the count changes.
-                                                            key: ValueKey<int>(
-                                                                correctInRow),
+                                          child:
+                                              roomBusfahrer.phase == 3 &&
+                                                      correctInRow < 5
+                                                  ? Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .spaceAround,
+                                                      children: [
+                                                        Text(
+                                                            "Busfahrer: $busfahrer",
                                                             style: TextStyle(
                                                                 fontSize:
                                                                     varFontSize)),
-                                                      ),
-                                                    ]),
-                                              ),
-                                            ],
-                                          ) : const Text('Spiel beendet!', style: TextStyle(fontSize: 42, fontWeight: FontWeight.w600, color: Colors.black)),
+                                                        AnimatedSwitcher(
+                                                            duration:
+                                                                const Duration(
+                                                                    milliseconds:
+                                                                        400),
+                                                            transitionBuilder:
+                                                                (child,
+                                                                    animation) {
+                                                              return FadeTransition(
+                                                                opacity:
+                                                                    animation,
+                                                                child: child,
+                                                              );
+                                                            },
+                                                            child: Container(
+                                                                key: ValueKey<
+                                                                    int>(deck
+                                                                        .isNotEmpty
+                                                                    ? deck[n].id
+                                                                    : 0),
+                                                                height: MediaQuery.of(
+                                                                            context)
+                                                                        .size
+                                                                        .height *
+                                                                    0.23,
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              10),
+                                                                  boxShadow: [
+                                                                    BoxShadow(
+                                                                      color: Colors
+                                                                          .black
+                                                                          .withOpacity(
+                                                                              0.4), // Shadow color and opacity
+                                                                      spreadRadius:
+                                                                          2, // How far the shadow spreads
+                                                                      blurRadius:
+                                                                          5, // The blur radius of the shadow
+                                                                      offset: const Offset(
+                                                                          0,
+                                                                          3), // Offset of the shadow (x, y)
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                                child: Image.asset(
+                                                                    'images/cards/${deck.isNotEmpty ? deck[n].card : 'herz2'}.png'))),
+                                                        Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal:
+                                                                      20.0),
+                                                          child: Row(
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .spaceBetween,
+                                                              children: [
+                                                                AnimatedSwitcher(
+                                                                  duration: const Duration(
+                                                                      milliseconds:
+                                                                          400),
+                                                                  transitionBuilder:
+                                                                      (child,
+                                                                          animation) {
+                                                                    return FadeTransition(
+                                                                        opacity:
+                                                                            animation,
+                                                                        child:
+                                                                            child);
+                                                                  },
+                                                                  child: Opacity(
+                                                                      key: ValueKey(correct),
+                                                                      opacity: correct != null ? 1.0 : 0.0,
+                                                                      child: Container(
+                                                                        padding: const EdgeInsets
+                                                                            .all(
+                                                                            10.0),
+                                                                        decoration: ShapeDecoration(
+                                                                            color: correct == true
+                                                                                ? correct == false
+                                                                                    ? Colors.transparent
+                                                                                    : colors.green
+                                                                                : colors.red,
+                                                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25.0))),
+                                                                        child: Text(
+                                                                            correct == true
+                                                                                ? correct == false
+                                                                                    ? ''
+                                                                                    : 'Richtig'
+                                                                                : 'Falsch',
+                                                                            style: TextStyle(fontSize: varFontSize)),
+                                                                      )),
+                                                                ),
+                                                                AnimatedSwitcher(
+                                                                  duration: const Duration(
+                                                                      milliseconds:
+                                                                          400),
+                                                                  transitionBuilder:
+                                                                      (child,
+                                                                          animation) {
+                                                                    return FadeTransition(
+                                                                        opacity:
+                                                                            animation,
+                                                                        child:
+                                                                            child);
+                                                                  },
+                                                                  child: Text(
+                                                                      "Richtig in Folge: $correctInRow",
+                                                                      // This key causes the AnimatedSwitcher to interpret this as a "new"
+                                                                      // child each time the count changes, so that it will begin its animation
+                                                                      // when the count changes.
+                                                                      key: ValueKey<
+                                                                              int>(
+                                                                          correctInRow),
+                                                                      style: TextStyle(
+                                                                          fontSize:
+                                                                              varFontSize)),
+                                                                ),
+                                                              ]),
+                                                        ),
+                                                      ],
+                                                    )
+                                                  : const Text('Spiel beendet!',
+                                                      style: TextStyle(
+                                                          fontSize: 42,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: Colors.black)),
                                         ),
                                       )
                                     ],
@@ -1080,57 +1091,59 @@ class _BusfahrerState extends State<Busfahrer>
                       ),
                     ),
                     const SizedBox(height: 8.0),
-                    if(!(_ersteller() &&
-                          roomBusfahrer.phase == 3 &&
-                          correctInRow < 5))
-                    Opacity(
-                      opacity: (_ersteller() && roomBusfahrer.phase != 3) ||
-                          (_ersteller() &&
-                              roomBusfahrer.phase == 3 &&
-                              correctInRow == 5) ? 1 : 0,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          AnimatedButton(
-                              width: (MediaQuery.of(context).size.width * 0.95),
-                              color: colors.teal,
-                              /* enabled:
+                    if (!(_ersteller() &&
+                        roomBusfahrer.phase == 3 &&
+                        correctInRow < 5))
+                      Opacity(
+                        opacity: (_ersteller() && roomBusfahrer.phase != 3) ||
+                                (_ersteller() &&
+                                    roomBusfahrer.phase == 3 &&
+                                    correctInRow == 5)
+                            ? 1
+                            : 0,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            AnimatedButton(
+                                width:
+                                    (MediaQuery.of(context).size.width * 0.95),
+                                color: colors.teal,
+                                /* enabled:
                                   (roomBusfahrer.phase == 2 && !flipArray[14]), */
-                              onPressed: () {
-                                if (roomBusfahrer.phase == 1) {
-                                  List<Cards> deck = createDeck();
-                                  deck.shuffle();
-                                  socket.emit('austeilen', {
-                                    'roomId': roomBusfahrer.roomId,
-                                    'deck': jsonEncode(deck)
-                                  });
-                                } else if (roomBusfahrer.phase == 2 &&
-                                    flipArray[14]) {
-                                  socket.emit("busfahren",
-                                      {'roomId': roomBusfahrer.roomId});
-                                } else if (roomBusfahrer.phase == 3) {
-                                  setState(() {
-                                    roomBusfahrer.phase == 1;
-                                  });
-                                  socket.emit("zumStart",
-                                      {'roomId': roomBusfahrer.roomId});
-                                  _resetGameInfo();
-                                }
-                              },
-                              child: Text(roomBusfahrer.phase == 1
-                                  ? strings.austeilen
-                                  : roomBusfahrer.phase == 2
-                                      ? strings.busfahren
-                                      : strings.zumStart)),
-                        ],
+                                onPressed: () {
+                                  if (roomBusfahrer.phase == 1) {
+                                    List<Cards> deck = createDeck();
+                                    deck.shuffle();
+                                    socket.emit('austeilen', {
+                                      'roomId': roomBusfahrer.roomId,
+                                      'deck': jsonEncode(deck)
+                                    });
+                                  } else if (roomBusfahrer.phase == 2 &&
+                                      flipArray[14]) {
+                                    socket.emit("busfahren",
+                                        {'roomId': roomBusfahrer.roomId});
+                                  } else if (roomBusfahrer.phase == 3) {
+                                    setState(() {
+                                      roomBusfahrer.phase == 1;
+                                    });
+                                    socket.emit("zumStart",
+                                        {'roomId': roomBusfahrer.roomId});
+                                    _resetGameInfo();
+                                  }
+                                },
+                                child: Text(roomBusfahrer.phase == 1
+                                    ? strings.austeilen
+                                    : roomBusfahrer.phase == 2
+                                        ? strings.busfahren
+                                        : strings.zumStart)),
+                          ],
+                        ),
                       ),
-                    ),
-                    if(_ersteller() &&
-                          roomBusfahrer.phase == 3 &&
-                          correctInRow < 5)
-                    Container(
-                      child: Row(
+                    if (_ersteller() &&
+                        roomBusfahrer.phase == 3 &&
+                        correctInRow < 5)
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -1161,7 +1174,6 @@ class _BusfahrerState extends State<Busfahrer>
                               child: const Icon(Icons.arrow_downward))
                         ],
                       ),
-                    ),
                     const Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -1182,68 +1194,26 @@ class _BusfahrerState extends State<Busfahrer>
             ),
           ),
         if (connectionFailed)
-          Container(
-            color:
-                Colors.black.withOpacity(0.3), // Semi-transparent overlay color
-            child: Center(
-              child: Stack(
-                children: [
-                  DefaultTextStyle(
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 16, decoration: null),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                            'Verbindung fehlgeschlagen.\nErneuter Versuch?'),
-                        const SizedBox(height: 16.0),
-                        FloatingActionButton(
-                          onPressed: () {
-                            setState(() {
-                              loading = true;
-                              connectionFailed = false;
-                            });
-                            Future.delayed(const Duration(seconds: 3), () {
-                              connectToServer();
-                            });
-                          },
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.transparent,
-                          elevation: 0,
-                          child: const Icon(
-                            Icons.autorenew,
-                            size: 45,
-                          ),
-                        ),
-                        const SizedBox(height: 16.0),
-                        const Text('Oder zurück zum Start'),
-                        const SizedBox(height: 16.0),
-                        AnimatedButton(
-                            color: colors.teal,
-                            onPressed: () {
-                              setState(() {
-                                name = '';
-                                nameEingabe = '';
-                                raumIdEingabe = '';
-                                roomBusfahrer = RoomBusfahrer(
-                                    roomId: '',
-                                    deck: [],
-                                    spieler: [],
-                                    phase: 1);
-                                connectionFailed = false;
-                              });
-                              _resetGameInfo();
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text('Zurück',
-                                style: TextStyle(color: Colors.black))),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          ConnectionErrorWidget(onFloatingButtonPressed: () {
+            setState(() {
+              loading = true;
+              connectionFailed = false;
+            });
+            Future.delayed(const Duration(seconds: 3), () {
+              connectToServer();
+            });
+          }, onBackButtonPressed: () {
+            setState(() {
+              name = '';
+              nameEingabe = '';
+              raumIdEingabe = '';
+              roomBusfahrer =
+                  RoomBusfahrer(roomId: '', deck: [], spieler: [], phase: 1);
+              connectionFailed = false;
+            });
+            _resetGameInfo();
+            Navigator.of(context).pop();
+          })
       ],
     );
   }

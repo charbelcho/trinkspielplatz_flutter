@@ -42,42 +42,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Map<String, StatefulWidget> create() {
     Map<String, StatefulWidget> spiele1 = {
-      'Ich hab noch nie': NochNie(),
-      'Wer würde eher?': Eher(),
-      'BANG!': Bang(),
-      'Pferderennen': Pferderennen(),
-      'Wer bin ich?': WerBinIch(),
-      'Mäxchen': Maexchen(),
-      'Würfel': Wuerfel(),
+      'Ich hab noch nie': const NochNie(),
+      'Wer würde eher?': const Eher(),
+      'BANG!': const Bang(),
+      'Pferderennen': const Pferderennen(),
+      'Wer bin ich?': const WerBinIch(),
+      'Mäxchen': const Maexchen(),
+      'Würfel': const Wuerfel(),
     };
     return spiele1;
   }
 
   Map<String, StatefulWidget> create2() {
     Map<String, StatefulWidget> spiele2 = {
-      'Wahrheit oder Pflicht?': WahrheitPflicht(),
-      'Höher oder Tiefer?': HoeherTiefer(),
-      'Captain Shithead': CaptainShithead(),
-      'King\'s Cup': KingsCup(),
-      'Busfahrer': Busfahrer(),
-      '100': Einhundert(),
-      'Karten': Karten()
+      'Wahrheit oder Pflicht?': const WahrheitPflicht(),
+      'Höher oder Tiefer?': const HoeherTiefer(),
+      'Captain Shithead': const CaptainShithead(),
+      'King\'s Cup': const KingsCup(),
+      'Busfahrer': const Busfahrer(),
+      '100': const Einhundert(),
+      'Karten': const Karten()
     };
     return spiele2;
   }
-
-  final Map<String, StatefulWidget> spieleSpalte2 = {
-    /* 'Wahrheit oder Pflicht?': const WahrheitPflicht(),
-    'Höher oder Tiefer?': const HoeherTiefer(),
-    'Captain Shithead': const CaptainShithead(),
-    'King\'s Cup': const KingsCup(),
-    'Busfahrer': const Busfahrer(),
-    '100': const Einhundert(),
-    'Karten': Karten(
-      analytics: analytics,
-      observer: observer,
-    ) */
-  };
 
   @override
   void initState() {

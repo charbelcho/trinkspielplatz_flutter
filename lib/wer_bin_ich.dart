@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
-
 import 'package:flutter/material.dart';
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/anleitungen.dart';
+import 'package:trinkspielplatz/connection_error_widget.dart';
 import 'package:trinkspielplatz/logger.dart';
 import 'package:trinkspielplatz/model/room_class.dart';
 import 'package:trinkspielplatz/model/spieler_class.dart';
@@ -17,7 +17,7 @@ import 'assets/strings.dart' as strings;
 import 'model/data_class.dart';
 
 class WerBinIch extends StatefulWidget {
-    const WerBinIch({super.key});
+  const WerBinIch({super.key});
 
   @override
   State<WerBinIch> createState() => _WerBinIchState();
@@ -41,6 +41,7 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
       socket =
           io.io("wss://socket-ios-backend.herokuapp.com", <String, dynamic>{
         "transports": ["websocket"],
+        "forceNew": true
       });
       /* socket = io.io("ws://localhost:8000", <String, dynamic>{
         "transports": ["websocket"],
@@ -193,8 +194,6 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
 
                   connectionFailed = false;
                 });
-                /* Navigator.of(context).pushNamedAndRemoveUntil(
-                    '/', (Route<dynamic> route) => false); */
                 Navigator.of(context).popUntil(ModalRoute.withName('/'));
               },
               child: const Text(
@@ -214,11 +213,6 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
       builder: (BuildContext context) {
         return WillPopScope(
           onWillPop: () async {
-            // Check for input and prevent dismissal if no input is given
-            /* if (nameEingabe.isEmpty) {
-              return false;
-            }
-            socket.emit("usernameWerbinIch", nameEingabe); */
             setState(() {
               nameEingabe = '';
             });
@@ -332,7 +326,7 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
                   Navigator.pop(context);
                 }
               },
-              child: const Text('Beitreten'),
+              child: const Text('Senden'),
             ),
           ],
         );
@@ -454,7 +448,8 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
                                   socket.emit("createRoom", name);
                                 }
                               },
-                              enabled: name.isNotEmpty && roomWerBinIch.roomId.isEmpty,
+                              enabled: name.isNotEmpty &&
+                                  roomWerBinIch.roomId.isEmpty,
                               child: const Text(strings.rErstellen)),
                           AnimatedButton(
                               width: (MediaQuery.of(context).size.width * 0.28),
@@ -464,7 +459,8 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
                                   _showDialogRaumBeitreten(context);
                                 }
                               },
-                              enabled: name.isNotEmpty && roomWerBinIch.roomId.isEmpty,
+                              enabled: name.isNotEmpty &&
+                                  roomWerBinIch.roomId.isEmpty,
                               child: const Text(strings.rBeitreten)),
                           AnimatedButton(
                               width: (MediaQuery.of(context).size.width * 0.28),
@@ -472,7 +468,8 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
                               onPressed: () {
                                 _showDialogRaumVerlassen(context);
                               },
-                              enabled: name.isNotEmpty && roomWerBinIch.roomId.isNotEmpty,
+                              enabled: name.isNotEmpty &&
+                                  roomWerBinIch.roomId.isNotEmpty,
                               child: const Text(
                                 strings.rVerlassen,
                                 style: TextStyle(color: Colors.white),
@@ -640,67 +637,27 @@ class _WerBinIchState extends State<WerBinIch> with RouteAware {
             ),
           ),
         if (connectionFailed)
-          Container(
-            color:
-                Colors.black.withOpacity(0.3), // Semi-transparent overlay color
-            child: Center(
-              child: Stack(
-                children: [
-                  DefaultTextStyle(
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 16, decoration: null),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                            'Verbindung fehlgeschlagen.\nErneuter Versuch?'),
-                        const SizedBox(height: 16.0),
-                        FloatingActionButton(
-                          onPressed: () {
-                            setState(() {
-                              loading = true;
-                              connectionFailed = false;
-                            });
-                            Future.delayed(const Duration(seconds: 3), () {
-                              connectToServer();
-                            });
-                          },
-                          foregroundColor: Colors.white,
-                          backgroundColor: Colors.transparent,
-                          elevation: 0,
-                          child: const Icon(
-                            Icons.autorenew,
-                            size: 45,
-                          ),
-                        ),
-                        const SizedBox(height: 16.0),
-                        const Text('Oder zurück zum Start'),
-                        const SizedBox(height: 16.0),
-                        AnimatedButton(
-                            color: colors.teal,
-                            onPressed: () {
-                              setState(() {
-                                loading = false;
-                                name = '';
-                                nameEingabe = '';
-                                raumIdEingabe = '';
-                                roomWerBinIch =
-                                    RoomWerBinIch(roomId: '', spieler: []);
-                                namenSpeichernFuerIndex = 0;
-                                namenSpeichernFuer = '';
-                                connectionFailed = false;
-                              });
-                              Navigator.of(context).pop();
-                            },
-                            child: const Text('Zurück',
-                                style: TextStyle(color: Colors.black))),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          ConnectionErrorWidget(onFloatingButtonPressed: () {
+            setState(() {
+              loading = true;
+              connectionFailed = false;
+            });
+            Future.delayed(const Duration(seconds: 3), () {
+              connectToServer();
+            });
+          }, onBackButtonPressed: () {
+            setState(() {
+              loading = false;
+              name = '';
+              nameEingabe = '';
+              raumIdEingabe = '';
+              roomWerBinIch = RoomWerBinIch(roomId: '', spieler: []);
+              namenSpeichernFuerIndex = 0;
+              namenSpeichernFuer = '';
+              connectionFailed = false;
+            });
+            Navigator.of(context).pop();
+          })
       ],
     );
   }

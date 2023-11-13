@@ -8,7 +8,7 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Bang extends StatefulWidget {
-  const Bang({Key? key}) : super(key: key);
+  const Bang({super.key});
 
   @override
   State<Bang> createState() => _BangState();

@@ -9,7 +9,7 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Maexchen extends StatefulWidget {
-  const Maexchen({Key? key}): super(key:key);
+  const Maexchen({super.key});
 
   @override
   State<Maexchen> createState() => _MaexchenState();
@@ -182,7 +182,7 @@ class _MaexchenState extends State<Maexchen>
                       mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           AnimatedButton(
-                            enabled: (!rolling),
+                            enabled: (gewuerfelt),
                             width: (MediaQuery.of(context).size.width * 0.95),
                             color: colors.teal,
                             onPressed: () {

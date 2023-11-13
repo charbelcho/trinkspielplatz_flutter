@@ -14,7 +14,7 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Pferderennen extends StatefulWidget {
-  const Pferderennen({Key? key}) : super(key: key);
+  const Pferderennen({super.key});
 
   @override
   State<Pferderennen> createState() => _PferderennenState();
@@ -395,8 +395,8 @@ class _PferderennenState extends State<Pferderennen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  height: 100,
+                SizedBox(
+                  //height: 100,
                   child: ListView.builder(
                     itemCount: winner.length,
                     itemBuilder: (context, index) {
@@ -407,8 +407,8 @@ class _PferderennenState extends State<Pferderennen>
                     },
                   ),
                 ),
-                Container(
-                  height: 100,
+                SizedBox(
+                  //height: 100,
                   child: ListView.builder(
                     itemCount: loser.length,
                     itemBuilder: (context, index) {

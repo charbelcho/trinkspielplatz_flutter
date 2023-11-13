@@ -11,7 +11,7 @@ import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 
 class Einhundert extends StatefulWidget {
-  const Einhundert({Key? key}) : super(key: key);
+  const Einhundert({super.key});
 
   @override
   State<Einhundert> createState() => _EinhundertState();
@@ -241,7 +241,7 @@ class _EinhundertState extends State<Einhundert>
                 actions: [
                   IconButton(
                       onPressed: _openSpielerDialog,
-                      icon: Icon(Icons.settings)),
+                      icon: const Icon(Icons.settings)),
                   AnleitungenButton()
                   // You can add more icons here if needed
                 ]),

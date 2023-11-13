@@ -5,6 +5,7 @@ import 'package:trinkspielplatz/model/spieler_class.dart';
 import 'package:trinkspielplatz/notify.dart';
 import 'assets/colors.dart' as colors;
 
+// ignore: must_be_immutable
 class SpielerPferderennenModal extends StatefulWidget {
   final List<SpielerPferderennen> spieler;
   bool? loading;

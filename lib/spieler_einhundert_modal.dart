@@ -4,6 +4,7 @@ import 'package:trinkspielplatz/model/spieler_class.dart';
 import 'package:trinkspielplatz/notify.dart';
 import 'assets/colors.dart' as colors;
 
+// ignore: must_be_immutable
 class SpielerEinhundertModal extends StatefulWidget {
   final List<Spieler100> spieler;
   final Function() setName;

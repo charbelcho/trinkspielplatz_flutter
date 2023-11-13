@@ -1,11 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/anleitungen.dart';
+import 'package:trinkspielplatz/connection_error_widget.dart';
 import 'package:trinkspielplatz/logger.dart';
-import 'package:trinkspielplatz/notify.dart';
 import 'package:trinkspielplatz/three_d_button.dart';
 import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
@@ -22,6 +21,7 @@ class _NochNieState extends State<NochNie> with RouteAware {
   int n = 0;
   List<NochNieData> nochnieList = [];
   bool loadingNochnie = true;
+  bool connectionFailed = false;
 
   @override
   void dispose() {
@@ -61,20 +61,27 @@ class _NochNieState extends State<NochNie> with RouteAware {
 
         if (mounted) {
           // Or return null, an empty list, or handle the error case accordingly
-          notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+          //notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+          WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {
+            connectionFailed = true;
+          }));
         }
       }
     } catch (e) {
       // An error occurred while fetching the data
       logger.e('Error during request from $url:  $e');
       // Or return null, an empty list, or handle the error case accordingly
-      if (mounted) {
-        notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {
+        connectionFailed = true;
+      }));
+      // if (mounted) {
+      //   notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+      // }
     }
     if (mounted) {
       setState(() {
         loadingNochnie = false;
+        connectionFailed = false;
       });
     }
   }
@@ -179,6 +186,17 @@ class _NochNieState extends State<NochNie> with RouteAware {
                       CircularProgressIndicator(), // Replace with your overlay content
                 ),
               ),
+            if (connectionFailed)
+              ConnectionErrorWidget(
+                onFloatingButtonPressed: () {
+                setState(() {
+                  loadingNochnie = true;
+                  connectionFailed = false;
+                });
+                fetchData();
+              }, onBackButtonPressed: () {
+                Navigator.of(context).pop();
+              })
           ],
         ));
   }

@@ -5,15 +5,15 @@ import 'package:http/http.dart' as http;
 import 'package:trinkspielplatz/ad_screen.dart';
 import 'package:trinkspielplatz/anleitungen.dart';
 import 'package:trinkspielplatz/bier_button.dart';
+import 'package:trinkspielplatz/connection_error_widget.dart';
 import 'package:trinkspielplatz/logger.dart';
-import 'package:trinkspielplatz/notify.dart';
 import 'package:trinkspielplatz/three_d_button.dart';
 import 'assets/colors.dart' as colors;
 import 'assets/strings.dart' as strings;
 import 'model/data_class.dart';
 
 class WahrheitPflicht extends StatefulWidget {
-  const WahrheitPflicht({Key? key}) : super(key: key);
+  const WahrheitPflicht({super.key});
 
   @override
   State<WahrheitPflicht> createState() => _WahrheitPflichtState();
@@ -29,6 +29,8 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> with RouteAware {
   bool pflichtVisible = false;
   bool loadingWahrheit = true;
   bool loadingPflicht = true;
+  bool connectionFailedWahrheit = false;
+  bool connectionFailedPflicht = false;
 
   @override
   void dispose() {
@@ -68,7 +70,10 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> with RouteAware {
 
         if (mounted) {
           // Or return null, an empty list, or handle the error case accordingly
-          notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+          //notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+          WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {
+            connectionFailedWahrheit = true;
+          }));
         }
       }
     } catch (e) {
@@ -76,12 +81,16 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> with RouteAware {
       logger.e('Error during request from $url:  $e');
       // Or return null, an empty list, or handle the error case accordingly
       if (mounted) {
-        notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+        //notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+        WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {
+          connectionFailedWahrheit = true;
+        }));
       }
     }
     if (mounted) {
       setState(() {
         loadingWahrheit = false;
+        connectionFailedWahrheit = false;
       });
     }
   }
@@ -111,7 +120,10 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> with RouteAware {
 
         if (mounted) {
           // Or return null, an empty list, or handle the error case accordingly
-          notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+          //notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+          WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {
+            connectionFailedPflicht = true;
+          }));
         }
       }
     } catch (e) {
@@ -120,12 +132,16 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> with RouteAware {
 
       // Or return null, an empty list, or handle the error case accordingly
       if (mounted) {
-        notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+        //notify.notifyError(context, 'Es ist ein Fehler aufgetreten');
+        WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {
+          connectionFailedPflicht = true;
+        }));
       }
     }
     if (mounted) {
       setState(() {
         loadingPflicht = false;
+        connectionFailedPflicht = false;
       });
     }
   }
@@ -296,6 +312,25 @@ class _WahrheitPflichtState extends State<WahrheitPflicht> with RouteAware {
                       CircularProgressIndicator(), // Replace with your overlay content
                 ),
               ),
+            if (connectionFailedWahrheit || connectionFailedPflicht)
+              ConnectionErrorWidget(onFloatingButtonPressed: () {
+                if (connectionFailedWahrheit) {
+                  setState(() {
+                    loadingWahrheit = true;
+                    connectionFailedWahrheit = false;
+                  });
+                  fetchDataWahrheit();
+                }
+                if (connectionFailedPflicht) {
+                  setState(() {
+                    loadingPflicht = true;
+                    connectionFailedPflicht = false;
+                  });
+                  fetchDataPflicht();
+                }
+              }, onBackButtonPressed: () {
+                Navigator.of(context).pop();
+              })
           ],
         ));
   }

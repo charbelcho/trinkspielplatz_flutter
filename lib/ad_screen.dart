@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class AdScreen extends StatefulWidget {
-  const AdScreen({Key? key}) : super(key: key);
+  const AdScreen({super.key});
 
   @override
   State<AdScreen> createState() => _AdScreenState();
@@ -12,7 +12,6 @@ class AdScreen extends StatefulWidget {
 
 class _AdScreenState extends State<AdScreen> {
   BannerAd? bannerAd;
-  bool _isLoaded = false;
 
   // TODO: replace this test ad unit with your own ad unit.
   final adUnitId = Platform.isAndroid
@@ -22,7 +21,7 @@ class _AdScreenState extends State<AdScreen> {
   @override
   void initState() {
     super.initState();
-    //loadAd();
+    loadAd();
   }
 
   @override
@@ -40,9 +39,6 @@ class _AdScreenState extends State<AdScreen> {
         // Called when an ad is successfully received.
         onAdLoaded: (ad) {
           debugPrint('$ad loaded.');
-          setState(() {
-            _isLoaded = true;
-          });
         },
         // Called when an ad request failed.
         onAdFailedToLoad: (ad, err) {
@@ -77,6 +73,11 @@ class _AdScreenState extends State<AdScreen> {
               ),
             ),
           )
-        : const SizedBox();
+        : const Column(
+          children: [
+            SizedBox(height: 16),
+            SizedBox(width: 320, height: 100)
+          ],
+        );
   }
 }

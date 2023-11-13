@@ -267,7 +267,6 @@ class _HoeherTieferState extends State<HoeherTiefer> with RouteAware {
                           width: (MediaQuery.of(context).size.width * 0.28),
                           color: colors.teal,
                           onPressed: () {
-                            print(screenWidth);
                             _hoeher();
                           },
                           child: const Icon(Icons.arrow_upward)),

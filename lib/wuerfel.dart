@@ -13,7 +13,7 @@ import 'assets/strings.dart' as strings;
 
 class Wuerfel extends StatefulWidget {
   
-  const Wuerfel({Key? key, }) : super(key: key);
+  const Wuerfel({super.key});
 
   @override
   State<Wuerfel> createState() => _WuerfelState();

@@ -4,7 +4,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 class SafariWrapper extends StatefulWidget {
   final String url;
 
-  SafariWrapper({required this.url});
+  const SafariWrapper({super.key, required this.url});
 
   @override
   _SafariWrapperState createState() => _SafariWrapperState();
