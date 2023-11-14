@@ -32,11 +32,6 @@ class _MaexchenState extends State<Maexchen>
 
 
   @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
   void initState() {
     timer = Timer(const Duration(milliseconds: 1), () {});
     super.initState();

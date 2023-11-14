@@ -18,7 +18,7 @@ class AnimatedButton extends StatefulWidget {
   final BoxShape shape;
 
   const AnimatedButton(
-      {Key? key,
+      {super.key,
         required this.onPressed,
         required this.child,
         this.enabled = true,
@@ -27,10 +27,7 @@ class AnimatedButton extends StatefulWidget {
         this.shadowDegree = ShadowDegree.light,
         this.width = 200,
         this.duration = 70,
-        this.shape = BoxShape.rectangle})
-      // ignore: unnecessary_null_comparison
-      : assert(child != null),
-        super(key: key);
+        this.shape = BoxShape.rectangle});
 
   @override
   State<AnimatedButton> createState() => _AnimatedButtonState();

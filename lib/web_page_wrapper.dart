@@ -7,6 +7,7 @@ class SafariWrapper extends StatefulWidget {
   const SafariWrapper({super.key, required this.url});
 
   @override
+  // ignore: library_private_types_in_public_api
   _SafariWrapperState createState() => _SafariWrapperState();
 }
 

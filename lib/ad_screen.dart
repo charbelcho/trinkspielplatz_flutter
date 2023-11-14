@@ -13,7 +13,6 @@ class AdScreen extends StatefulWidget {
 class _AdScreenState extends State<AdScreen> {
   BannerAd? bannerAd;
 
-  // TODO: replace this test ad unit with your own ad unit.
   final adUnitId = Platform.isAndroid
       ? 'ca-app-pub-5545282755961898/8024751131'
       : 'ca-app-pub-5545282755961898/4498060356';

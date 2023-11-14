@@ -61,11 +61,6 @@ class _WuerfelState extends State<Wuerfel>
   bool rolling = false;
 
   @override
-  void dispose() {  
-    super.dispose();
-  }
-
-  @override
   void initState() {
     timer = Timer(const Duration(milliseconds: 1), () {});
     super.initState();

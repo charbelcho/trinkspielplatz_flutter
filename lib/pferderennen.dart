@@ -38,10 +38,6 @@ class _PferderennenState extends State<Pferderennen>
   int position3 = 0;
   int position4 = 0;
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 
   @override
   void initState() {
