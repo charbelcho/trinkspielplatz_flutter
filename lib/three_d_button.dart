@@ -18,7 +18,8 @@ class AnimatedButton extends StatefulWidget {
   final BoxShape shape;
 
   const AnimatedButton(
-      {super.key,
+      {
+        super.key,
         required this.onPressed,
         required this.child,
         this.enabled = true,
